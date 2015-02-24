@@ -211,12 +211,12 @@ static PrototypeAST *ParsePrototype() {
 
 // top level expr
 FunctionAST* ParseTopLevelExpr() {
-  if (ExprAST *E = ParseExpression()) {
-    // stick in an anonymous function
-    PrototypeAST *Proto = new PrototypeAST("repl", "void", std::vector<std::string>(), std::vector<std::string>());
-    return new FunctionAST(Proto, E);
-  }
-  return 0;
+  ExprAST *E = ParseExpression();
+  if (!E) return 0;
+
+  // stick in an anonymous function
+  PrototypeAST *Proto = new PrototypeAST("", "void", std::vector<std::string>(), std::vector<std::string>());
+  return new FunctionAST(Proto, E);
 }
 
 FunctionAST *ParseFunctionDefinition() {

@@ -6,10 +6,15 @@
 #include <string>
 #include <vector>
 
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Module.h"
+
+using namespace llvm;
+
 class ExprAST {
 public:
   virtual ~ExprAST() {}
-//  virtual Value *Codegen() = 0;
+  virtual Value *Codegen() = 0;
 };
 
 class NumberExprAST : public ExprAST {
@@ -17,7 +22,7 @@ class NumberExprAST : public ExprAST {
 public:
   NumberExprAST(double val)
     : Val(val) {}
-//  virtual Value *Codegen();
+  virtual Value *Codegen();
 };
 
 class VariableExprAST : public ExprAST {
@@ -25,7 +30,7 @@ class VariableExprAST : public ExprAST {
 public:
   VariableExprAST(const std::string &name)
     : Name(name) {}
-//  virtual Value *Codegen();
+  virtual Value *Codegen();
 };
 
 class BinaryExprAST : public ExprAST {
@@ -34,7 +39,7 @@ class BinaryExprAST : public ExprAST {
 public:
   BinaryExprAST(char op, ExprAST *lhs, ExprAST *rhs)
     : Op(op), LHS(lhs), RHS(rhs) {}
-//  virtual Value *Codegen();
+  virtual Value *Codegen();
 };
 
 class CallExprAST : public ExprAST {
@@ -43,7 +48,7 @@ class CallExprAST : public ExprAST {
 public:
   CallExprAST(const std::string &callee, std::vector<ExprAST*> &args)
     : Callee(callee), Args(args) {}
-//  virtual Value *Codegen();
+  virtual Value *Codegen();
 };
 
 class PrototypeAST {
@@ -59,7 +64,7 @@ public:
     const std::vector<std::string> &argnames
   )
     : Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
-//  virtual Value *Codegen();
+  Function *Codegen();
 };
 
 class FunctionAST {
@@ -68,7 +73,7 @@ class FunctionAST {
 public:
   FunctionAST(PrototypeAST *proto, ExprAST *body)
     : Proto(proto), Body(body) {}
-//  virtual Value *Codegen();
+  Function *Codegen();
 };
 
 #endif
