@@ -11,6 +11,32 @@ static std::string IdentifierStr;   // only valid if tok_identifier
 static double NumberVal;            // only valid if tok_number
 static int IntegerVal;              // only valid if tok_integer
 
+static SourceLocation CurLoc;
+static SourceLocation LexLoc = { 1, 0 };
+
+SourceLocation getCurrentLocation() {
+  return CurLoc;
+}
+
+bool isNewline(int ch) {
+  return ch == '\n' || ch == '\r';
+}
+
+int advance() {
+
+  int LastChar = getchar();
+
+  if (isNewline(LastChar)) {
+    LexLoc.Line++;
+    LexLoc.Column = 0;
+  } else {
+    LexLoc.Column++;
+  }
+
+  return LastChar;
+
+}
+
 int gettok() {
 
   static int LastChar = ' ';
@@ -19,11 +45,13 @@ int gettok() {
     return tok_eof;
 
   while (isspace(LastChar))
-    LastChar = getchar();
+    LastChar = advance();
+
+  CurLoc = LexLoc;
 
   if (isalpha(LastChar)) {
     IdentifierStr = LastChar;
-    while (isalnum((LastChar = getchar())))
+    while (isalnum((LastChar = advance())))
       IdentifierStr += LastChar;
 
     if (IdentifierStr == "value") return tok_value;
@@ -42,7 +70,7 @@ int gettok() {
       isDouble = isDouble || LastChar == '.';
 
       NumStr += LastChar;
-      LastChar = getchar();
+      LastChar = advance();
     } while (isdigit(LastChar) || LastChar == '.');
 
     if (isDouble) {
@@ -55,8 +83,8 @@ int gettok() {
 
   if (LastChar == '#') {
     do {
-      LastChar = getchar();
-    } while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
+      LastChar = advance();
+    } while (LastChar != EOF && !isNewline(LastChar));
 
     if (LastChar != EOF)
       return gettok();
@@ -66,7 +94,7 @@ int gettok() {
     return tok_eof;
 
   int ThisChar = LastChar;
-  LastChar = getchar();
+  LastChar = advance();
   return ThisChar;
 
 }

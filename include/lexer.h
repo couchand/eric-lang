@@ -27,4 +27,13 @@ const std::string getIdentifierStr();
 double getNumberVal();
 int getIntegerVal();
 
+typedef struct T_SourceLocation {
+
+  int Line;
+  int Column;
+
+} SourceLocation;
+
+SourceLocation getCurrentLocation();
+
 #endif

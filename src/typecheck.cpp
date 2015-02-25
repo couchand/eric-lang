@@ -8,13 +8,17 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/TypeBuilder.h"
 
-Type* ErrorT(const char *message) {
-  fprintf(stderr, "Error while typechecking: %s\n", message);
+void TypeError(SourceLocation loc, const char *message) {
+  fprintf(stderr, "Error while typechecking at line %i, column %i: %s\n", loc.Line, loc.Column, message);
+}
+
+Type *ErrorT(ExprAST *e, const char *message) {
+  TypeError(e->getLocation(), message);
   return 0;
 }
 
-FunctionType* ErrorFT(const char *message) {
-  ErrorT(message);
+FunctionType *ErrorFT(SourceLocation loc, const char *message) {
+  TypeError(loc, message);
   return 0;
 }
 
@@ -42,7 +46,7 @@ Type *VariableExprAST::Typecheck() {
   if (!T) {
     std::string message = "Unknown variable name: ";
     message += Name;
-    return ErrorT(message.c_str());
+    return ErrorT(this, message.c_str());
   }
 
   return T;
@@ -108,7 +112,7 @@ Type *BinaryExprAST::Typecheck() {
   if (!Combined) {
     std::string message = "Incompatible binary expression types in: ";
     message += Op;
-    return ErrorT(message.c_str());
+    return ErrorT(this, message.c_str());
   }
 
   return Combined;
@@ -120,11 +124,11 @@ Type *CallExprAST::Typecheck() {
   if (!FT) {
     std::string message = "Unknown function reference: ";
     message += Callee;
-    return ErrorT(message.c_str());
+    return ErrorT(this, message.c_str());
   }
 
   if (FT->getNumParams() != Args.size())
-    return ErrorT("Wrong number of arguments to function");
+    return ErrorT(this, "Wrong number of arguments to function");
 
   for (unsigned i = 0, e = Args.size(); i < e; i++) {
     Type *argType = Args[i]->Typecheck();
@@ -135,7 +139,7 @@ Type *CallExprAST::Typecheck() {
     if (Coalesced != paramType) {
       std::string message = "Incompatible types in call to: ";
       message += Callee;
-      return ErrorT(message.c_str());
+      return ErrorT(this, message.c_str());
     }
   }
 
@@ -147,7 +151,7 @@ FunctionType *PrototypeAST::Typecheck() {
   if (!ReturnType) {
     std::string message = "Unknown return type in function prototype: ";
     message += Returns;
-    return ErrorFT(message.c_str());
+    return ErrorFT(Location, message.c_str());
   }
 
   std::vector<Type *> Params;
@@ -156,7 +160,7 @@ FunctionType *PrototypeAST::Typecheck() {
     if (!ArgType) {
       std::string message = "Unknown param type in function prototype: ";
       message += ArgTypes[i];
-      return ErrorFT(message.c_str());
+      return ErrorFT(Location, message.c_str());
     }
 
     Params.push_back(ArgType);
@@ -176,7 +180,6 @@ FunctionType *FunctionAST::Typecheck() {
   FunctionType *T = Proto->Typecheck();
   if (!T) return 0;
 
-  // TODO: check body
   Type* BodyType = Body->Typecheck();
   if (!BodyType) return 0;
 
@@ -185,7 +188,7 @@ FunctionType *FunctionAST::Typecheck() {
   if (!Coalesced) {
     std::string message = "Incompatible types in definition of: ";
     message += Proto->getName();
-    return ErrorFT(message.c_str());
+    return ErrorFT(Proto->getLocation(), message.c_str());
   }
 
   return T;

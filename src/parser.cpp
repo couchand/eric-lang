@@ -22,7 +22,8 @@ int getNextToken() {
 // basic error reporting
 
 ExprAST *Error(const char *message) {
-  fprintf(stderr, "Error: %s\n", message);
+  SourceLocation l = getCurrentLocation();
+  fprintf(stderr, "Error parsing at line %i column %i: %s\n", l.Line, l.Column, message);
   return 0;
 }
 
@@ -42,14 +43,14 @@ static ExprAST* ParseExpression();
 
 // integerexpr ::= integer
 static ExprAST *ParseIntegerExpr() {
-  ExprAST *Result = new IntegerExprAST(getIntegerVal());
+  ExprAST *Result = new IntegerExprAST(getCurrentLocation(), getIntegerVal());
   getNextToken(); // eat integer
   return Result;
 }
 
 // numberexpr ::= number
 static ExprAST *ParseNumberExpr() {
-  ExprAST *Result = new NumberExprAST(getNumberVal());
+  ExprAST *Result = new NumberExprAST(getCurrentLocation(), getNumberVal());
   getNextToken(); // eat number
   return Result;
 }
@@ -74,12 +75,13 @@ static ExprAST* ParseParenExpr() {
 //    ::= identifier '(' expression* ')'
 static ExprAST *ParseIdentifierExpr() {
   std::string IdName = getIdentifierStr();
+  SourceLocation loc = getCurrentLocation();
 
   getNextToken(); // eat the identifier
 
   // simple variable reference
   if (CurTok != '(')
-    return new VariableExprAST(IdName);
+    return new VariableExprAST(loc, IdName);
 
   // function call
   getNextToken(); // eat (
@@ -105,7 +107,7 @@ static ExprAST *ParseIdentifierExpr() {
 
   getNextToken(); // eat )
 
-  return new CallExprAST(IdName, Args);
+  return new CallExprAST(loc, IdName, Args);
 }
 
 // primary
@@ -149,6 +151,7 @@ static ExprAST *ParseBinOpRHS(int ExprPrec, ExprAST *LHS) {
     if (TokPrec < ExprPrec) return LHS;
 
     int BinOp = CurTok;
+    SourceLocation loc = getCurrentLocation();
     getNextToken(); // eat op
 
     ExprAST *RHS = ParsePrimary();
@@ -160,7 +163,7 @@ static ExprAST *ParseBinOpRHS(int ExprPrec, ExprAST *LHS) {
       if (!RHS) return 0;
     }
 
-    LHS = new BinaryExprAST(BinOp, LHS, RHS);
+    LHS = new BinaryExprAST(loc, BinOp, LHS, RHS);
   }
 }
 
@@ -174,6 +177,8 @@ static ExprAST *ParseExpression() {
 
 // prototype ::= '(' (id id (',' id id)*) ')' id id
 static PrototypeAST *ParsePrototype() {
+  SourceLocation loc = getCurrentLocation();
+
   if (getCurrentToken() != '(')
     return ErrorP("Expected parameter list in prototype");
 
@@ -214,11 +219,13 @@ static PrototypeAST *ParsePrototype() {
 
   getNextToken(); // eat name
 
-  return new PrototypeAST(FnName, Returns, ArgTypes, ArgNames);
+  return new PrototypeAST(loc, FnName, Returns, ArgTypes, ArgNames);
 }
 
 // top level expr
 FunctionAST* ParseTopLevelExpr() {
+  SourceLocation loc = getCurrentLocation();
+
   ExprAST *E = ParseExpression();
   if (!E) return 0;
 
@@ -237,11 +244,12 @@ FunctionAST* ParseTopLevelExpr() {
   }
 
   // stick in an anonymous function
-  PrototypeAST *Proto = new PrototypeAST("", type, std::vector<std::string>(), std::vector<std::string>());
+  PrototypeAST *Proto = new PrototypeAST(loc, "", type, std::vector<std::string>(), std::vector<std::string>());
   return new FunctionAST(Proto, E);
 }
 
 FunctionAST *ParseFunctionDefinition() {
+  SourceLocation loc = getCurrentLocation();
   getNextToken(); // eat function
   PrototypeAST *Proto = ParsePrototype();
   if (!Proto) return 0;

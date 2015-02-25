@@ -14,13 +14,17 @@
 //#include "llvm/IR/Verifier.h"
 //#include "llvm/Support/TypeBuilder.h"
 
-Value *ErrorV(const char *message) {
-  fprintf(stderr, "Error while compiling to IR: %s\n", message);
+void CompilerError(SourceLocation loc, const char *message) {
+  fprintf(stderr, "Error while compiling at line %i, column %i: %s\n", loc.Line, loc.Column, message);
+}
+
+Value *ErrorV(ExprAST *e, const char *message) {
+  CompilerError(e->getLocation(), message);
   return 0;
 }
 
-Function *ErrorF2(const char *message) {
-  ErrorV(message);
+Function *ErrorF2(SourceLocation loc, const char *message) {
+  CompilerError(loc, message);
   return 0;
 }
 
@@ -52,7 +56,7 @@ Value *VariableExprAST::Codegen() {
     std::string message = "Unknown variable name: '";
     message += Name;
     message += "'";
-    return ErrorV(message.c_str());
+    return ErrorV(this, message.c_str());
   }
 
   return V;
@@ -69,7 +73,7 @@ Value *BinaryExprAST::Codegen() {
   if (T->isFloatingPointTy()) {
     switch (Op) {
     default:
-      return ErrorV("invalid binary operator");
+      return ErrorV(this, "invalid binary operator");
     case '+': return Builder.CreateFAdd(L, R, "addtmp");
     case '-': return Builder.CreateFSub(L, R, "subtmp");
     case '*': return Builder.CreateFMul(L, R, "multmp");
@@ -81,7 +85,7 @@ Value *BinaryExprAST::Codegen() {
   else if (T->isIntegerTy()) {
     switch (Op) {
     default:
-      return ErrorV("invalid binary operator");
+      return ErrorV(this, "invalid binary operator");
     case '+': return Builder.CreateAdd(L, R, "addtmp");
     case '-': return Builder.CreateSub(L, R, "subtmp");
     case '*': return Builder.CreateMul(L, R, "multmp");
@@ -90,7 +94,7 @@ Value *BinaryExprAST::Codegen() {
       return Builder.CreateZExtOrBitCast(L, Type::getInt64Ty(getGlobalContext()), "booltmp");
     }
   }
-  return ErrorV("invalid types in binary operator");
+  return ErrorV(this, "invalid types in binary operator");
 }
 
 Value *CallExprAST::Codegen() {
@@ -98,11 +102,11 @@ Value *CallExprAST::Codegen() {
   if (!CalleeF) {
     std::string message = "Unknown function reference: ";
     message += Callee;
-    return ErrorV(message.c_str());
+    return ErrorV(this, message.c_str());
   }
 
   if (CalleeF->arg_size() != Args.size())
-    return ErrorV("Wrong number of arguments to function");
+    return ErrorV(this, "Wrong number of arguments to function");
 
   std::vector<Value*> ArgsV;
   for (unsigned i = 0, e = Args.size(); i < e; i++) {
@@ -124,13 +128,13 @@ Function *PrototypeAST::Codegen() {
     if (!F->empty()) {
       std::string message = "redefinition of function: ";
       message += Name;
-      return ErrorF2(message.c_str());
+      return ErrorF2(Location, message.c_str());
     }
 
     if (F->arg_size() != ArgTypes.size()) {
       std::string message = "implementation of function has wrong arguments: ";
       message += Name;
-      return ErrorF2(message.c_str());
+      return ErrorF2(Location, message.c_str());
     }
   }
 

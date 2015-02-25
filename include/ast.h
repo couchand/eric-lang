@@ -9,20 +9,29 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 
+#include "lexer.h"
+
 using namespace llvm;
 
 class ExprAST {
+  SourceLocation Location;
+
 public:
   virtual ~ExprAST() {}
   virtual Value *Codegen() = 0;
   virtual Type *Typecheck() = 0;
+
+  ExprAST(SourceLocation loc)
+    : Location(loc) {}
+
+  SourceLocation getLocation() const { return Location; }
 };
 
 class IntegerExprAST : public ExprAST {
   int Val;
 public:
-  IntegerExprAST(int val)
-    : Val(val) {}
+  IntegerExprAST(SourceLocation loc, int val)
+    : ExprAST(loc), Val(val) {}
   virtual Value *Codegen();
   virtual Type *Typecheck();
 };
@@ -30,8 +39,8 @@ public:
 class NumberExprAST : public ExprAST {
   double Val;
 public:
-  NumberExprAST(double val)
-    : Val(val) {}
+  NumberExprAST(SourceLocation loc, double val)
+    : ExprAST(loc), Val(val) {}
   virtual Value *Codegen();
   virtual Type *Typecheck();
 };
@@ -39,8 +48,8 @@ public:
 class VariableExprAST : public ExprAST {
   std::string Name;
 public:
-  VariableExprAST(const std::string &name)
-    : Name(name) {}
+  VariableExprAST(SourceLocation loc, const std::string &name)
+    : ExprAST(loc), Name(name) {}
   virtual Value *Codegen();
   virtual Type *Typecheck();
 };
@@ -49,8 +58,8 @@ class BinaryExprAST : public ExprAST {
   char Op;
   ExprAST *LHS, *RHS;
 public:
-  BinaryExprAST(char op, ExprAST *lhs, ExprAST *rhs)
-    : Op(op), LHS(lhs), RHS(rhs) {}
+  BinaryExprAST(SourceLocation loc, char op, ExprAST *lhs, ExprAST *rhs)
+    : ExprAST(loc), Op(op), LHS(lhs), RHS(rhs) {}
   virtual Value *Codegen();
   virtual Type *Typecheck();
 };
@@ -59,29 +68,33 @@ class CallExprAST : public ExprAST {
   std::string Callee;
   std::vector<ExprAST*> Args;
 public:
-  CallExprAST(const std::string &callee, std::vector<ExprAST*> &args)
-    : Callee(callee), Args(args) {}
+  CallExprAST(SourceLocation loc, const std::string &callee, std::vector<ExprAST*> &args)
+    : ExprAST(loc), Callee(callee), Args(args) {}
   virtual Value *Codegen();
   virtual Type *Typecheck();
 };
 
 class PrototypeAST {
+  SourceLocation Location;
+
   std::string Name;
   std::string Returns;
   std::vector<std::string> ArgTypes;
   std::vector<std::string> ArgNames;
 public:
   PrototypeAST(
+    SourceLocation loc,
     const std::string &name,
     const std::string &returns,
     const std::vector<std::string> &argtypes,
     const std::vector<std::string> &argnames
   )
-    : Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
+    : Location(loc), Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
   Function *Codegen();
   FunctionType *Typecheck();
 
   const std::string getName() { return Name; }
+  const SourceLocation getLocation() { return Location; }
 };
 
 class FunctionAST {
