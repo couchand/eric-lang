@@ -102,6 +102,8 @@ public:
   Function *Codegen();
   FunctionType *Typecheck();
 
+  void UpdateArguments(Function *F);
+
   const std::string getName() { return Name; }
   const SourceLocation getLocation() { return Location; }
 };

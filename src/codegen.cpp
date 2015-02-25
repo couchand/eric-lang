@@ -1,18 +1,20 @@
 // codegen
 
 #include <cstdio>
+#include <string>
 #include <map>
+#include <vector>
 
 #include "ast.h"
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Analysis/Verifier.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IR/TypeBuilder.h"
-// llvm 3.5 headers
-//#include "llvm/IR/Verifier.h"
-//#include "llvm/Support/TypeBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DIBuilder.h"
 
 void CompilerError(SourceLocation loc, const char *message) {
   fprintf(stderr, "Error while compiling at line %i, column %i: %s\n", loc.Line, loc.Column, message);
@@ -28,23 +30,135 @@ Function *ErrorF2(SourceLocation loc, const char *message) {
   return 0;
 }
 
+// GLOBALS
+
 static Module *TheModule;
 static IRBuilder<> Builder(getGlobalContext());
 static std::map<std::string, Value*> NamedValues;
 
-void InitializeCodegen() {
+// debug info
+
+static DIBuilder *DBuilder;
+
+struct DebugInfo {
+
+  DICompileUnit Module;
+  DIFile Unit;
+  std::map<std::string, DIType> Types;
+
+  std::vector<DIScope *> LexicalBlocks;
+  std::map<const PrototypeAST *, DIScope> FnScopeMap;
+
+  void clearLocation();
+  void emitLocation(ExprAST *AST);
+  void emitLocation(int line, int column);
+
+} EricDebugInfo;
+
+void DebugInfo::clearLocation() {
+  Builder.SetCurrentDebugLocation(DebugLoc());
+}
+
+void DebugInfo::emitLocation(ExprAST *AST) {
+  SourceLocation loc = AST->getLocation();
+
+  emitLocation(loc.Line, loc.Column);
+}
+
+void DebugInfo::emitLocation(int line, int column) {
+  DIScope *Scope;
+  if (LexicalBlocks.empty())
+    Scope = &Module;
+  else
+    Scope = LexicalBlocks.back();
+
+  Builder.SetCurrentDebugLocation(
+    DebugLoc::get(line, column, DIScope(*Scope))
+  );
+}
+
+// functions
+
+void InitializeCodegen(const char *filename) {
   LLVMContext &Context = getGlobalContext();
   TheModule = new Module("eric repl", Context);
+
+  TheModule->addModuleFlag(Module::Warning, "Debug Info Version", DEBUG_METADATA_VERSION);
+
+  DBuilder = new DIBuilder(*TheModule);
+
+  EricDebugInfo.Module = DBuilder->createCompileUnit(
+    dwarf::DW_LANG_C, // lang
+    filename,         // file
+    ".",              // dir
+    "Eric Compiler",  // producer
+    0,                // optimized?
+    "",               // flags
+    0                 // version
+  );
+
+  EricDebugInfo.Unit = DBuilder->createFile(EricDebugInfo.Module.getFilename(), EricDebugInfo.Module.getDirectory());
+
+  EricDebugInfo.Types["number"] = DBuilder->createBasicType("number", 64, 64, dwarf::DW_ATE_float);
+  EricDebugInfo.Types["integer"] = DBuilder->createBasicType("integer", 64, 64, dwarf::DW_ATE_signed);
+  EricDebugInfo.Types["boolean"] = DBuilder->createBasicType("integer", 1, 1, dwarf::DW_ATE_boolean);
+}
+
+static DIType getDebugType(Type *type) {
+  if (type->isIntegerTy(1)) {
+    return EricDebugInfo.Types["boolean"];
+  }
+  else if (type->isIntegerTy()) {
+    return EricDebugInfo.Types["integer"];
+  }
+  else { //if (type->isFloatingPointTy()) {
+    return EricDebugInfo.Types["number"];
+  }
+}
+
+static DICompositeType CreateFunctionType(FunctionType *type) {
+  SmallVector<Value *, 8> paramTypes;
+
+  Type *returns = type->getReturnType();
+  paramTypes.push_back(getDebugType(returns));
+
+  for (unsigned i = 0, e = type->getNumParams(); i < e; i++) {
+    paramTypes.push_back(getDebugType(type->getParamType(i)));
+  }
+
+  DIArray paramTypeArray = DBuilder->getOrCreateArray(paramTypes);
+  return DBuilder->createSubroutineType(EricDebugInfo.Unit, paramTypeArray);
 }
 
 void CreateMainFunction(std::vector<Function*> expressions) {
   FunctionType *mainType = TypeBuilder<types::i<64>(), true>::get(getGlobalContext());
   Function *main = Function::Create(mainType, Function::ExternalLinkage, "main", TheModule);
 
+  DIDescriptor fContext(EricDebugInfo.Unit);
+  DISubprogram SP = DBuilder->createFunction(
+    fContext,                                   // file
+    "main",                                     // name
+    "",                                         // ??
+    EricDebugInfo.Unit,                         // file
+    0,                                          // line number
+    CreateFunctionType(mainType),               // function type
+    false,                                      // internal linkage
+    true,                                       // definition
+    0,                                          // ??
+    DIDescriptor::FlagPrototyped,               // flags
+    false,                                      // ??
+    main                                        // the function
+  );
+
+  EricDebugInfo.LexicalBlocks.push_back(&SP);
+  EricDebugInfo.clearLocation();
+
   BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", main);
   Builder.SetInsertPoint(BB);
 
   Value *result;
+
+  EricDebugInfo.emitLocation(0, 0);
 
   for (unsigned i = 0, e = expressions.size(); i < e; i++) {
     result = Builder.CreateCall(expressions[i], std::vector<Value*>());
@@ -58,10 +172,16 @@ void CreateMainFunction(std::vector<Function*> expressions) {
     Builder.CreateRet(result);
   }
 
+  EricDebugInfo.LexicalBlocks.pop_back();
+
   verifyFunction(*main);
 }
 
 void DumpAllCode() {
+  // complete debug operations
+  DBuilder->finalize();
+
+  // dump code
   TheModule->dump();
 }
 
@@ -221,14 +341,45 @@ Function *PrototypeAST::Codegen() {
     }
   }
 
+  DIDescriptor fContext(EricDebugInfo.Unit);
+  DISubprogram SP = DBuilder->createFunction(
+    fContext,                                   // file
+    Name,                                       // name
+    "",                                         // ??
+    EricDebugInfo.Unit,                         // file
+    Location.Line,                              // line number
+    CreateFunctionType(FT),                     // function type
+    false,                                      // internal linkage
+    true,                                       // definition
+    0,                                          // ??
+    DIDescriptor::FlagPrototyped,               // flags
+    false,                                      // ??
+    F                                           // the function
+  );
+
+  EricDebugInfo.FnScopeMap[this] = SP;
+
+  return F;
+}
+
+void PrototypeAST::UpdateArguments(Function *F) {
   unsigned Idx = 0;
   for (Function::arg_iterator AI = F->arg_begin(); Idx != ArgTypes.size(); ++AI, ++Idx) {
     AI->setName(ArgNames[Idx]);
 
     NamedValues[ArgNames[Idx]] = AI;
-  }
 
-  return F;
+    DIScope *Scope = EricDebugInfo.LexicalBlocks.back();
+    DIVariable D = DBuilder->createLocalVariable(
+      dwarf::DW_TAG_arg_variable,
+      *Scope,
+      ArgNames[Idx],
+      EricDebugInfo.Unit,
+      Location.Line,
+      EricDebugInfo.Types[ArgTypes[Idx]],
+      Idx
+    );
+  }
 }
 
 Function *FunctionAST::Codegen() {
@@ -237,16 +388,27 @@ Function *FunctionAST::Codegen() {
   Function *TheFunction = Proto->Codegen();
   if (!TheFunction) return 0;
 
+  EricDebugInfo.LexicalBlocks.push_back(&EricDebugInfo.FnScopeMap[Proto]);
+  EricDebugInfo.clearLocation();
+
   BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
   Builder.SetInsertPoint(BB);
+
+  Proto->UpdateArguments(TheFunction);
+
+  EricDebugInfo.emitLocation(Body);
 
   Value *RetVal = Body->Codegen();
   if (!RetVal) {
     TheFunction->eraseFromParent();
+    EricDebugInfo.LexicalBlocks.pop_back();
     return 0;
   }
 
   Builder.CreateRet(RetVal);
+
+  EricDebugInfo.LexicalBlocks.pop_back();
+
   verifyFunction(*TheFunction);
 
   return TheFunction;

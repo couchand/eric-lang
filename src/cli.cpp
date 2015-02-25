@@ -89,14 +89,19 @@ static void mainLoop() {
 
 int main(int argc, char** argv) {
   std::string flag = "-c";
-  if (argc > 1 && flag == argv[1]) showPrompt = false;
+  std::string filename = "a.eric";
+  if (argc > 1 && flag == argv[1]) {
+    showPrompt = false;
+
+    if (argc > 2) filename = argv[2];
+  }
 
   InitializeLexer();
   InstallDefaultPrecedence();
 
   prime();
 
-  InitializeCodegen();
+  InitializeCodegen(filename.c_str());
   InitializeTypecheck();
 
   mainLoop();
