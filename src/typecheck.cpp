@@ -31,6 +31,9 @@ void InitializeTypecheck() {
 
   NamedTypes["number"] = TypeBuilder<llvm::types::ieee_double, true>::get(Context);
   NamedTypes["integer"] = TypeBuilder<llvm::types::i<64>, true>::get(Context);
+
+  FunctionTypes["number"] = TypeBuilder<llvm::types::ieee_double(llvm::types::i<64>), true>::get(Context);
+  FunctionTypes["integer"] = TypeBuilder<llvm::types::i<64>(llvm::types::ieee_double), true>::get(Context);
 }
 
 Type *IntegerExprAST::Typecheck() {

@@ -98,6 +98,52 @@ Value *BinaryExprAST::Codegen() {
 }
 
 Value *CallExprAST::Codegen() {
+  if (Callee == "integer") {
+    if (Args.size() != 1) {
+      return ErrorV(this, "Integer cast expects a single argument");
+    }
+
+    Type *T = Args[0]->Typecheck();
+    if (!T) return 0;
+
+    if (T->isIntegerTy()) {
+      // assume one integer type (TODO: not)
+      return Args[0]->Codegen();
+    }
+    else if (T->isFloatingPointTy()) {
+      Value *Source = Args[0]->Codegen();
+      if (!Source) return 0;
+
+      return Builder.CreateFPToSI(Source, Type::getInt64Ty(getGlobalContext()), "casttmp");
+    }
+    else {
+      return ErrorV(this, "Unable to cast type to integer");
+    }
+  }
+
+  if (Callee == "number") {
+    if (Args.size() != 1) {
+      return ErrorV(this, "Number cast expects a single argument");
+    }
+
+    Type *T = Args[0]->Typecheck();
+    if (!T) return 0;
+
+    if (T->isFloatingPointTy()) {
+      // assume one float type (TODO: not)
+      return Args[0]->Codegen();
+    }
+    else if (T->isIntegerTy()) {
+      Value *Source = Args[0]->Codegen();
+      if (!Source) return 0;
+
+      return Builder.CreateSIToFP(Source, Type::getDoubleTy(getGlobalContext()), "casttmp");
+    }
+    else {
+      return ErrorV(this, "Unable to cast type to integer");
+    }
+  }
+
   Function *CalleeF = TheModule->getFunction(Callee);
   if (!CalleeF) {
     std::string message = "Unknown function reference: ";
