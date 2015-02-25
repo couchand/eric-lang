@@ -16,8 +16,14 @@ enum Token {
   // function declarations
   tok_external = -4, tok_function = -5,
 
-  // identifiers and numbers
-  tok_identifier = -6, tok_number = -7, tok_integer = -8,
+  // identifiers
+  tok_identifier = -6,
+
+  // numbers
+  tok_number = -7, tok_integer = -8,
+
+  // boolean literals
+  tok_false = -9, tok_true = -10,
 
 };
 
@@ -35,5 +41,7 @@ typedef struct T_SourceLocation {
 } SourceLocation;
 
 SourceLocation getCurrentLocation();
+
+void InitializeLexer();
 
 #endif

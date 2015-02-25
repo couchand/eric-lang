@@ -29,11 +29,16 @@ static std::map<std::string, FunctionType*> FunctionTypes;
 void InitializeTypecheck() {
   LLVMContext &Context = getGlobalContext();
 
+  NamedTypes["boolean"] = TypeBuilder<llvm::types::i<1>, true>::get(Context);
   NamedTypes["number"] = TypeBuilder<llvm::types::ieee_double, true>::get(Context);
   NamedTypes["integer"] = TypeBuilder<llvm::types::i<64>, true>::get(Context);
 
   FunctionTypes["number"] = TypeBuilder<llvm::types::ieee_double(llvm::types::i<64>), true>::get(Context);
   FunctionTypes["integer"] = TypeBuilder<llvm::types::i<64>(llvm::types::ieee_double), true>::get(Context);
+}
+
+Type *BooleanExprAST::Typecheck() {
+  return NamedTypes["boolean"];
 }
 
 Type *IntegerExprAST::Typecheck() {
@@ -118,7 +123,14 @@ Type *BinaryExprAST::Typecheck() {
     return ErrorT(this, message.c_str());
   }
 
-  return Combined;
+  switch (Op) {
+  default: return Combined;
+  case '<':
+  case '>':
+  case '=':
+  case '&':
+  case '|': return NamedTypes["boolean"];
+  }
 }
 
 Type *CallExprAST::Typecheck() {

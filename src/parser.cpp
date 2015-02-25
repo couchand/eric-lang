@@ -41,6 +41,14 @@ FunctionAST *ErrorF(const char* message) {
 
 static ExprAST* ParseExpression();
 
+// booleanexpr ::= "false" | "true"
+static ExprAST *ParseBooleanExpr() {
+  bool isTrue = tok_true == getCurrentToken();
+  ExprAST *Result = new BooleanExprAST(getCurrentLocation(), isTrue);
+  getNextToken(); // eat boolean
+  return Result;
+}
+
 // integerexpr ::= integer
 static ExprAST *ParseIntegerExpr() {
   ExprAST *Result = new IntegerExprAST(getCurrentLocation(), getIntegerVal());
@@ -117,9 +125,15 @@ static ExprAST *ParseIdentifierExpr() {
 static ExprAST *ParsePrimary() {
   switch (CurTok) {
   default: return Error("expecting a primary expression");
+
   case tok_identifier:  return ParseIdentifierExpr();
   case tok_integer:     return ParseIntegerExpr();
   case tok_number:      return ParseNumberExpr();
+
+  case tok_false:
+  case tok_true:
+    return ParseBooleanExpr();
+
   case '(':             return ParseParenExpr();
   }
 }
@@ -137,6 +151,7 @@ static int GetTokPrecedence() {
 }
 
 void InstallDefaultPrecedence() {
+  BinopPrecedence['='] = 10;
   BinopPrecedence['<'] = 10;
   BinopPrecedence['+'] = 20;
   BinopPrecedence['-'] = 20;
@@ -233,7 +248,10 @@ FunctionAST* ParseTopLevelExpr() {
   if (!T) return 0;
 
   const char* type;
-  if (T->isIntegerTy()) {
+  if (T->isIntegerTy(1)) {
+    type = "boolean";
+  }
+  else if (T->isIntegerTy()) {
     type = "integer";
   }
   else if (T->isFloatingPointTy()) {

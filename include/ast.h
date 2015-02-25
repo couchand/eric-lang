@@ -27,6 +27,15 @@ public:
   SourceLocation getLocation() const { return Location; }
 };
 
+class BooleanExprAST : public ExprAST {
+  bool Val;
+public:
+  BooleanExprAST(SourceLocation loc, bool val)
+    : ExprAST(loc), Val(val) {}
+  virtual Value *Codegen();
+  virtual Type *Typecheck();
+};
+
 class IntegerExprAST : public ExprAST {
   int Val;
 public:

@@ -88,6 +88,7 @@ static void mainLoop() {
 }
 
 int main() {
+  InitializeLexer();
   InstallDefaultPrecedence();
 
   prime();

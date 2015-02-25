@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 
 #include "lexer.h"
 
@@ -37,6 +38,19 @@ int advance() {
 
 }
 
+std::map<std::string, int> Keywords;
+
+void InitializeLexer() {
+
+  Keywords["value"]     = tok_value;
+  Keywords["entity"]    = tok_entity;
+  Keywords["external"]  = tok_external;
+  Keywords["function"]  = tok_function;
+  Keywords["false"]     = tok_false;
+  Keywords["true"]      = tok_true;
+
+}
+
 int gettok() {
 
   static int LastChar = ' ';
@@ -54,10 +68,9 @@ int gettok() {
     while (isalnum((LastChar = advance())))
       IdentifierStr += LastChar;
 
-    if (IdentifierStr == "value") return tok_value;
-    if (IdentifierStr == "entity") return tok_entity;
-    if (IdentifierStr == "external") return tok_external;
-    if (IdentifierStr == "function") return tok_function;
+    if (Keywords.count(IdentifierStr) > 0) {
+      return Keywords[IdentifierStr];
+    }
 
     return tok_identifier;
   }

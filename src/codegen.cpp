@@ -41,6 +41,10 @@ void DumpAllCode() {
   TheModule->dump();
 }
 
+Value *BooleanExprAST::Codegen() {
+  return ConstantInt::get(TypeBuilder<types::i<1>, true>::get(getGlobalContext()), Val);
+}
+
 Value *IntegerExprAST::Codegen() {
   return ConstantInt::get(TypeBuilder<types::i<64>, true>::get(getGlobalContext()), Val);
 }
@@ -70,28 +74,37 @@ Value *BinaryExprAST::Codegen() {
   Type *T = Typecheck();
   if (!T) return 0;
 
-  if (T->isFloatingPointTy()) {
+  Type *LT = LHS->Typecheck();
+
+  if (T->isIntegerTy(1)) {
     switch (Op) {
-    default:
-      return ErrorV(this, "invalid binary operator");
+    default: return ErrorV(this, "invalid binary operator");
+    case '<':
+      if (LT->isFloatingPointTy())
+        return Builder.CreateFCmpULT(L, R, "cmptmp");
+      if (LT->isIntegerTy())
+        return Builder.CreateICmpSLT(L, R, "cmptmp");
+    case '=':
+      if (LT->isFloatingPointTy())
+        return Builder.CreateFCmpUEQ(L, R, "cmptmp");
+      if (LT->isIntegerTy())
+        return Builder.CreateICmpEQ(L, R, "cmptmp");
+    }
+  }
+  else if (T->isFloatingPointTy()) {
+    switch (Op) {
+    default:  return ErrorV(this, "invalid binary operator");
     case '+': return Builder.CreateFAdd(L, R, "addtmp");
     case '-': return Builder.CreateFSub(L, R, "subtmp");
     case '*': return Builder.CreateFMul(L, R, "multmp");
-    case '<':
-      L = Builder.CreateFCmpULT(L, R, "cmptmp");
-      return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()), "booltmp");
     }
   }
   else if (T->isIntegerTy()) {
     switch (Op) {
-    default:
-      return ErrorV(this, "invalid binary operator");
+    default:  return ErrorV(this, "invalid binary operator");
     case '+': return Builder.CreateAdd(L, R, "addtmp");
     case '-': return Builder.CreateSub(L, R, "subtmp");
     case '*': return Builder.CreateMul(L, R, "multmp");
-    case '<':
-      L = Builder.CreateICmpULT(L, R, "cmptmp");
-      return Builder.CreateZExtOrBitCast(L, Type::getInt64Ty(getGlobalContext()), "booltmp");
     }
   }
   return ErrorV(this, "invalid types in binary operator");
