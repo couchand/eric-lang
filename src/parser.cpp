@@ -40,10 +40,17 @@ FunctionAST *ErrorF(const char* message) {
 
 static ExprAST* ParseExpression();
 
+// integerexpr ::= integer
+static ExprAST *ParseIntegerExpr() {
+  ExprAST *Result = new IntegerExprAST(getIntegerVal());
+  getNextToken(); // eat integer
+  return Result;
+}
+
 // numberexpr ::= number
 static ExprAST *ParseNumberExpr() {
   ExprAST *Result = new NumberExprAST(getNumberVal());
-  getNextToken();
+  getNextToken(); // eat number
   return Result;
 }
 
@@ -109,6 +116,7 @@ static ExprAST *ParsePrimary() {
   switch (CurTok) {
   default: return Error("expecting a primary expression");
   case tok_identifier:  return ParseIdentifierExpr();
+  case tok_integer:     return ParseIntegerExpr();
   case tok_number:      return ParseNumberExpr();
   case '(':             return ParseParenExpr();
   }
@@ -214,8 +222,22 @@ FunctionAST* ParseTopLevelExpr() {
   ExprAST *E = ParseExpression();
   if (!E) return 0;
 
+  Type *T = E->Typecheck();
+  if (!T) return 0;
+
+  const char* type;
+  if (T->isIntegerTy()) {
+    type = "integer";
+  }
+  else if (T->isFloatingPointTy()) {
+    type = "number";
+  }
+  else {
+    return ErrorF("unknown return type");
+  }
+
   // stick in an anonymous function
-  PrototypeAST *Proto = new PrototypeAST("", "void", std::vector<std::string>(), std::vector<std::string>());
+  PrototypeAST *Proto = new PrototypeAST("", type, std::vector<std::string>(), std::vector<std::string>());
   return new FunctionAST(Proto, E);
 }
 

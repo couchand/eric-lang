@@ -3,11 +3,13 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include "lexer.h"
 
 static std::string IdentifierStr;   // only valid if tok_identifier
 static double NumberVal;            // only valid if tok_number
+static int IntegerVal;              // only valid if tok_integer
 
 int gettok() {
 
@@ -33,14 +35,22 @@ int gettok() {
   }
 
   if (isdigit(LastChar) || LastChar == '.') {
+    bool isDouble = false;
+
     std::string NumStr;
     do {
+      isDouble = isDouble || LastChar == '.';
+
       NumStr += LastChar;
       LastChar = getchar();
     } while (isdigit(LastChar) || LastChar == '.');
 
-    NumberVal = strtod(NumStr.c_str(), 0);
-    return tok_number;
+    if (isDouble) {
+      NumberVal = strtod(NumStr.c_str(), 0);
+      return tok_number;
+    }
+    IntegerVal = atoi(NumStr.c_str());
+    return tok_integer;
   }
 
   if (LastChar == '#') {
@@ -67,4 +77,8 @@ const std::string getIdentifierStr() {
 
 double getNumberVal() {
   return NumberVal;
+}
+
+int getIntegerVal() {
+  return IntegerVal;
 }

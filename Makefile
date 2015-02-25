@@ -6,7 +6,7 @@ LDFLAGS=-O3 `$(LLVM_CONFIG) --ldflags --libs core`
 
 all: cli
 
-obj/cli.o: src/cli.cpp include/ast.h include/parser.h
+obj/cli.o: src/cli.cpp include/ast.h include/parser.h include/codegen.h include/typecheck.h
 	$(CC) -c $<  -I include -o $@ $(CFLAGS)
 
 obj/codegen.o: src/codegen.cpp include/ast.h
@@ -18,7 +18,10 @@ obj/lexer.o: src/lexer.cpp include/lexer.h
 obj/parser.o: src/parser.cpp include/lexer.h include/ast.h include/parser.h
 	$(CC) -c $<  -I include -o $@ $(CFLAGS)
 
-cli: obj/cli.o obj/lexer.o obj/parser.o obj/codegen.o
+obj/typecheck.o: src/typecheck.cpp include/ast.h
+	$(CC) -c $<  -I include -o $@ $(CFLAGS)
+
+cli: obj/cli.o obj/lexer.o obj/parser.o obj/codegen.o obj/typecheck.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 clean:

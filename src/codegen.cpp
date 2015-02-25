@@ -9,6 +9,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/IR/TypeBuilder.h"
+// llvm 3.5 headers
+//#include "llvm/IR/Verifier.h"
+//#include "llvm/Support/TypeBuilder.h"
 
 Value *ErrorV(const char *message) {
   fprintf(stderr, "Error while compiling to IR: %s\n", message);
@@ -33,6 +37,10 @@ void DumpAllCode() {
   TheModule->dump();
 }
 
+Value *IntegerExprAST::Codegen() {
+  return ConstantInt::get(TypeBuilder<types::i<64>, true>::get(getGlobalContext()), Val);
+}
+
 Value *NumberExprAST::Codegen() {
   return ConstantFP::get(getGlobalContext(), APFloat(Val));
 }
@@ -55,16 +63,34 @@ Value *BinaryExprAST::Codegen() {
   Value *R = RHS->Codegen();
   if (!L || !R) return 0;
 
-  switch (Op) {
-  default:
-    return ErrorV("invalid binary operator");
-  case '+': return Builder.CreateFAdd(L, R, "addtmp");
-  case '-': return Builder.CreateFSub(L, R, "subtmp");
-  case '*': return Builder.CreateFMul(L, R, "multmp");
-  case '<':
-    L = Builder.CreateFCmpULT(L, R, "cmptmp");
-    return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()), "booltmp");
+  Type *T = Typecheck();
+  if (!T) return 0;
+
+  if (T->isFloatingPointTy()) {
+    switch (Op) {
+    default:
+      return ErrorV("invalid binary operator");
+    case '+': return Builder.CreateFAdd(L, R, "addtmp");
+    case '-': return Builder.CreateFSub(L, R, "subtmp");
+    case '*': return Builder.CreateFMul(L, R, "multmp");
+    case '<':
+      L = Builder.CreateFCmpULT(L, R, "cmptmp");
+      return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()), "booltmp");
+    }
   }
+  else if (T->isIntegerTy()) {
+    switch (Op) {
+    default:
+      return ErrorV("invalid binary operator");
+    case '+': return Builder.CreateAdd(L, R, "addtmp");
+    case '-': return Builder.CreateSub(L, R, "subtmp");
+    case '*': return Builder.CreateMul(L, R, "multmp");
+    case '<':
+      L = Builder.CreateICmpULT(L, R, "cmptmp");
+      return Builder.CreateZExtOrBitCast(L, Type::getInt64Ty(getGlobalContext()), "booltmp");
+    }
+  }
+  return ErrorV("invalid types in binary operator");
 }
 
 Value *CallExprAST::Codegen() {
@@ -88,8 +114,7 @@ Value *CallExprAST::Codegen() {
 }
 
 Function *PrototypeAST::Codegen() {
-  std::vector<Type*> Doubles(ArgTypes.size(), Type::getDoubleTy(getGlobalContext()));
-  FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
+  FunctionType *FT = Typecheck();
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
 
   if (F->getName() != Name) {

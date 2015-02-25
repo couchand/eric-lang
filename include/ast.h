@@ -15,6 +15,16 @@ class ExprAST {
 public:
   virtual ~ExprAST() {}
   virtual Value *Codegen() = 0;
+  virtual Type *Typecheck() = 0;
+};
+
+class IntegerExprAST : public ExprAST {
+  int Val;
+public:
+  IntegerExprAST(int val)
+    : Val(val) {}
+  virtual Value *Codegen();
+  virtual Type *Typecheck();
 };
 
 class NumberExprAST : public ExprAST {
@@ -23,6 +33,7 @@ public:
   NumberExprAST(double val)
     : Val(val) {}
   virtual Value *Codegen();
+  virtual Type *Typecheck();
 };
 
 class VariableExprAST : public ExprAST {
@@ -31,6 +42,7 @@ public:
   VariableExprAST(const std::string &name)
     : Name(name) {}
   virtual Value *Codegen();
+  virtual Type *Typecheck();
 };
 
 class BinaryExprAST : public ExprAST {
@@ -40,6 +52,7 @@ public:
   BinaryExprAST(char op, ExprAST *lhs, ExprAST *rhs)
     : Op(op), LHS(lhs), RHS(rhs) {}
   virtual Value *Codegen();
+  virtual Type *Typecheck();
 };
 
 class CallExprAST : public ExprAST {
@@ -49,6 +62,7 @@ public:
   CallExprAST(const std::string &callee, std::vector<ExprAST*> &args)
     : Callee(callee), Args(args) {}
   virtual Value *Codegen();
+  virtual Type *Typecheck();
 };
 
 class PrototypeAST {
@@ -65,6 +79,9 @@ public:
   )
     : Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
   Function *Codegen();
+  FunctionType *Typecheck();
+
+  const std::string getName() { return Name; }
 };
 
 class FunctionAST {
@@ -74,6 +91,7 @@ public:
   FunctionAST(PrototypeAST *proto, ExprAST *body)
     : Proto(proto), Body(body) {}
   Function *Codegen();
+  FunctionType *Typecheck();
 };
 
 #endif

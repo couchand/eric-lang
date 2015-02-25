@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
+#include "typecheck.h"
 
 static void prompt() {
   fprintf(stderr, "ready> ");
@@ -15,57 +16,67 @@ static void prime() {
   getNextToken();
 }
 
-static void handleTopLevelExpression() {
+static Function* handleTopLevelExpression() {
   FunctionAST *block = ParseTopLevelExpr();
   if (block) {
     fprintf(stderr, "Parsed expression!\n");
 
-    Function *code = block->Codegen();
+    Type *T = block->Typecheck();
+    if (!T) return 0;
 
-    if (code) {
-      code->dump();
-    }
+    return block->Codegen();
   }
   else {
     getNextToken();
   }
+  return 0;
 }
 
-static void handleFunctionDefinition() {
+static Function* handleFunctionDefinition() {
   FunctionAST *block = ParseFunctionDefinition();
   if (block) {
     fprintf(stderr, "Parsed function definition!\n");
 
-    Function* code = block->Codegen();
+    Type *T = block->Typecheck();
+    if (!T) return 0;
 
-    if (code) {
-      code->dump();
-    }
+    return block->Codegen();
   }
   else {
     getNextToken();
   }
+  return 0;
 }
 
-static void handleExternalDeclaration() {
+static Function* handleExternalDeclaration() {
   PrototypeAST *proto = ParseExternalDeclaration();
   if (proto) {
     fprintf(stderr, "Parsed external declaration!\n");
-
-    Function *code = proto->Codegen();
-
-    if (code) {
-      code->dump();
-    }
+    return proto->Codegen();
   }
   else {
     getNextToken();
+  }
+  return 0;
+}
+
+static void handleNext(int token) {
+  Function* code;
+  switch (token) {
+    default:            code = handleTopLevelExpression(); break;
+    case tok_function:  code = handleFunctionDefinition(); break;
+    case tok_external:  code = handleExternalDeclaration(); break;
+  }
+
+  if (code) {
+    code->dump();
   }
 }
 
 static void mainLoop() {
   while (1) {
     prompt();
+
     switch (getCurrentToken()) {
     default:            handleTopLevelExpression(); break;
     case tok_function:  handleFunctionDefinition(); break;
@@ -82,6 +93,7 @@ int main() {
   prime();
 
   InitializeCodegen();
+  InitializeTypecheck();
 
   mainLoop();
 
