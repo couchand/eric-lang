@@ -37,6 +37,30 @@ void InitializeCodegen() {
   TheModule = new Module("eric repl", Context);
 }
 
+void CreateMainFunction(std::vector<Function*> expressions) {
+  FunctionType *mainType = TypeBuilder<types::i<64>(), true>::get(getGlobalContext());
+  Function *main = Function::Create(mainType, Function::ExternalLinkage, "main", TheModule);
+
+  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", main);
+  Builder.SetInsertPoint(BB);
+
+  Value *result;
+
+  for (unsigned i = 0, e = expressions.size(); i < e; i++) {
+    result = Builder.CreateCall(expressions[i], std::vector<Value*>());
+  }
+
+  if (!result || !result->getType()->isIntegerTy(64)) {
+    Value *zero = ConstantInt::get(TypeBuilder<types::i<64>, true>::get(getGlobalContext()), 0);
+    Builder.CreateRet(zero);
+  }
+  else {
+    Builder.CreateRet(result);
+  }
+
+  verifyFunction(*main);
+}
+
 void DumpAllCode() {
   TheModule->dump();
 }

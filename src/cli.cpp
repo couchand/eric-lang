@@ -16,6 +16,8 @@ static void prime() {
   getNextToken();
 }
 
+std::vector<Function*> TopLevelExpressions;
+
 static Function* handleTopLevelExpression() {
   FunctionAST *block = ParseTopLevelExpr();
   if (block) {
@@ -24,7 +26,9 @@ static Function* handleTopLevelExpression() {
     Type *T = block->Typecheck();
     if (!T) return 0;
 
-    return block->Codegen();
+    Function *code = block->Codegen();
+    TopLevelExpressions.push_back(code);
+    return code;
   }
   else {
     getNextToken();
@@ -97,6 +101,8 @@ int main() {
   InitializeTypecheck();
 
   mainLoop();
+
+  CreateMainFunction(TopLevelExpressions);
 
   fprintf(stderr, "\n\n\n");
   DumpAllCode();
