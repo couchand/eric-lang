@@ -23,7 +23,7 @@ std::vector<Function*> TopLevelExpressions;
 static Function* handleTopLevelExpression() {
   FunctionAST *block = ParseTopLevelExpr();
   if (block) {
-    Type *T = block->Typecheck();
+    TypeData *T = block->Typecheck();
     if (!T) return 0;
 
     Function *code = block->Codegen();
@@ -39,7 +39,7 @@ static Function* handleTopLevelExpression() {
 static Function* handleFunctionDefinition() {
   FunctionAST *block = ParseFunctionDefinition();
   if (block) {
-    Type *T = block->Typecheck();
+    TypeData *T = block->Typecheck();
     if (!T) return 0;
 
     return block->Codegen();

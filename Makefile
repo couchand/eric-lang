@@ -6,10 +6,10 @@ LDFLAGS=-O3 `$(LLVM_CONFIG) --ldflags --libs core --system-libs`
 
 all: cli
 
-obj/cli.o: src/cli.cpp include/ast.h include/parser.h include/codegen.h include/typecheck.h
+obj/cli.o: src/cli.cpp include/ast.h include/parser.h include/codegen.h include/typecheck.h include/types.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-obj/codegen.o: src/codegen.cpp include/ast.h
+obj/codegen.o: src/codegen.cpp include/codegen.h include/ast.h include/types.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 obj/lexer.o: src/lexer.cpp include/lexer.h
@@ -18,10 +18,13 @@ obj/lexer.o: src/lexer.cpp include/lexer.h
 obj/parser.o: src/parser.cpp include/lexer.h include/ast.h include/parser.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-obj/typecheck.o: src/typecheck.cpp include/ast.h
+obj/typecheck.o: src/typecheck.cpp include/typecheck.h include/ast.h include/types.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-cli: obj/cli.o obj/lexer.o obj/parser.o obj/codegen.o obj/typecheck.o
+obj/types.o: src/types.cpp include/types.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+
+cli: obj/cli.o obj/lexer.o obj/parser.o obj/types.o obj/codegen.o obj/typecheck.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 clean:

@@ -244,25 +244,11 @@ FunctionAST* ParseTopLevelExpr() {
   ExprAST *E = ParseExpression();
   if (!E) return 0;
 
-  Type *T = E->Typecheck();
+  TypeData *T = E->Typecheck();
   if (!T) return 0;
 
-  const char* type;
-  if (T->isIntegerTy(1)) {
-    type = "boolean";
-  }
-  else if (T->isIntegerTy()) {
-    type = "integer";
-  }
-  else if (T->isFloatingPointTy()) {
-    type = "number";
-  }
-  else {
-    return ErrorF("unknown return type");
-  }
-
   // stick in an anonymous function
-  PrototypeAST *Proto = new PrototypeAST(loc, "", type, std::vector<std::string>(), std::vector<std::string>());
+  PrototypeAST *Proto = new PrototypeAST(loc, "", T->getName(), std::vector<std::string>(), std::vector<std::string>());
   return new FunctionAST(Proto, E);
 }
 

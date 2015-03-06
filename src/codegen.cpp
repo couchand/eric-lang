@@ -99,20 +99,18 @@ void InitializeCodegen(const char *filename) {
 
   EricDebugInfo.Unit = DBuilder->createFile(EricDebugInfo.Module.getFilename(), EricDebugInfo.Module.getDirectory());
 
-  EricDebugInfo.Types["number"] = DBuilder->createBasicType("number", 64, 64, dwarf::DW_ATE_float);
-  EricDebugInfo.Types["integer"] = DBuilder->createBasicType("integer", 64, 64, dwarf::DW_ATE_signed);
-  EricDebugInfo.Types["boolean"] = DBuilder->createBasicType("integer", 1, 1, dwarf::DW_ATE_boolean);
+  InitializeBasicTypes(Context, DBuilder);
 }
 
 static DIType getDebugType(Type *type) {
   if (type->isIntegerTy(1)) {
-    return EricDebugInfo.Types["boolean"];
+    return TypeData::getType("boolean")->getDIType(&EricDebugInfo.Unit, DBuilder);
   }
   else if (type->isIntegerTy()) {
-    return EricDebugInfo.Types["integer"];
+    return TypeData::getType("integer")->getDIType(&EricDebugInfo.Unit, DBuilder);
   }
   else { //if (type->isFloatingPointTy()) {
-    return EricDebugInfo.Types["number"];
+    return TypeData::getType("number")->getDIType(&EricDebugInfo.Unit, DBuilder);
   }
 }
 
@@ -215,10 +213,10 @@ Value *BinaryExprAST::Codegen() {
   Value *R = RHS->Codegen();
   if (!L || !R) return 0;
 
-  Type *T = Typecheck();
+  Type *T = Typecheck()->getLLVMType();
   if (!T) return 0;
 
-  Type *LT = LHS->Typecheck();
+  Type *LT = LHS->Typecheck()->getLLVMType();
 
   if (T->isIntegerTy(1)) {
     switch (Op) {
@@ -255,49 +253,36 @@ Value *BinaryExprAST::Codegen() {
 }
 
 Value *CallExprAST::Codegen() {
-  if (Callee == "integer") {
+  if (Callee == "integer" || Callee == "number" || Callee == "boolean") {
     if (Args.size() != 1) {
-      return ErrorV(this, "Integer cast expects a single argument");
+      return ErrorV(this, "Cast expects a single argument");
     }
 
-    Type *T = Args[0]->Typecheck();
-    if (!T) return 0;
+    TypeData *target = TypeData::getType(Callee);
 
-    if (T->isIntegerTy()) {
-      // assume one integer type (TODO: not)
+    TypeData *source = Args[0]->Typecheck();
+    if (!source) return 0;
+
+    if (source == target) {
+      // same type, no cast needed
       return Args[0]->Codegen();
     }
-    else if (T->isFloatingPointTy()) {
+    else if (source->canConvertTo(target)) {
       Value *Source = Args[0]->Codegen();
       if (!Source) return 0;
 
-      return Builder.CreateFPToSI(Source, Type::getInt64Ty(getGlobalContext()), "casttmp");
+      std::string message = "Casting ";
+      message += source->getName();
+      message += " to ";
+      message += target->getName();
+      fprintf(stdout, "Casting %s to %s\n", source->getName().c_str(), target->getName().c_str());
+
+      return source->convertTo(Builder, target, Source);
     }
     else {
-      return ErrorV(this, "Unable to cast type to integer");
-    }
-  }
-
-  if (Callee == "number") {
-    if (Args.size() != 1) {
-      return ErrorV(this, "Number cast expects a single argument");
-    }
-
-    Type *T = Args[0]->Typecheck();
-    if (!T) return 0;
-
-    if (T->isFloatingPointTy()) {
-      // assume one float type (TODO: not)
-      return Args[0]->Codegen();
-    }
-    else if (T->isIntegerTy()) {
-      Value *Source = Args[0]->Codegen();
-      if (!Source) return 0;
-
-      return Builder.CreateSIToFP(Source, Type::getDoubleTy(getGlobalContext()), "casttmp");
-    }
-    else {
-      return ErrorV(this, "Unable to cast type to integer");
+      std::string message = "Unable to cast type to ";
+      message += Callee;
+      return ErrorV(this, message.c_str());
     }
   }
 
@@ -321,7 +306,7 @@ Value *CallExprAST::Codegen() {
 }
 
 Function *PrototypeAST::Codegen() {
-  FunctionType *FT = Typecheck();
+  FunctionType *FT = (FunctionType *)Typecheck()->getLLVMType();
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
 
   if (F->getName() != Name) {
@@ -376,7 +361,7 @@ void PrototypeAST::UpdateArguments(Function *F) {
       ArgNames[Idx],
       EricDebugInfo.Unit,
       Location.Line,
-      EricDebugInfo.Types[ArgTypes[Idx]],
+      TypeData::getType(ArgTypes[Idx])->getDIType(&EricDebugInfo.Unit, DBuilder),
       Idx
     );
   }

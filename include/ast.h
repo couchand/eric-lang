@@ -10,6 +10,7 @@
 #include "llvm/IR/Module.h"
 
 #include "lexer.h"
+#include "types.h"
 
 using namespace llvm;
 
@@ -19,7 +20,7 @@ class ExprAST {
 public:
   virtual ~ExprAST() {}
   virtual Value *Codegen() = 0;
-  virtual Type *Typecheck() = 0;
+  virtual TypeData *Typecheck() = 0;
 
   ExprAST(SourceLocation loc)
     : Location(loc) {}
@@ -33,7 +34,7 @@ public:
   BooleanExprAST(SourceLocation loc, bool val)
     : ExprAST(loc), Val(val) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class IntegerExprAST : public ExprAST {
@@ -42,7 +43,7 @@ public:
   IntegerExprAST(SourceLocation loc, int val)
     : ExprAST(loc), Val(val) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class NumberExprAST : public ExprAST {
@@ -51,7 +52,7 @@ public:
   NumberExprAST(SourceLocation loc, double val)
     : ExprAST(loc), Val(val) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class VariableExprAST : public ExprAST {
@@ -60,7 +61,7 @@ public:
   VariableExprAST(SourceLocation loc, const std::string &name)
     : ExprAST(loc), Name(name) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class BinaryExprAST : public ExprAST {
@@ -70,7 +71,7 @@ public:
   BinaryExprAST(SourceLocation loc, char op, ExprAST *lhs, ExprAST *rhs)
     : ExprAST(loc), Op(op), LHS(lhs), RHS(rhs) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class CallExprAST : public ExprAST {
@@ -80,7 +81,7 @@ public:
   CallExprAST(SourceLocation loc, const std::string &callee, std::vector<ExprAST*> &args)
     : ExprAST(loc), Callee(callee), Args(args) {}
   virtual Value *Codegen();
-  virtual Type *Typecheck();
+  virtual TypeData *Typecheck();
 };
 
 class PrototypeAST {
@@ -100,7 +101,7 @@ public:
   )
     : Location(loc), Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
   Function *Codegen();
-  FunctionType *Typecheck();
+  FunctionTypeData *Typecheck();
 
   void UpdateArguments(Function *F);
 
@@ -115,7 +116,7 @@ public:
   FunctionAST(PrototypeAST *proto, ExprAST *body)
     : Proto(proto), Body(body) {}
   Function *Codegen();
-  FunctionType *Typecheck();
+  FunctionTypeData *Typecheck();
 };
 
 #endif
