@@ -358,6 +358,9 @@ void PrototypeAST::UpdateArguments(Function *F) {
       TypeData::getType(ArgTypes[Idx])->getDIType(&EricDebugInfo.Unit, DBuilder),
       Idx
     );
+
+    llvm::Instruction *Call = DBuilder->insertDeclare(AI, D, Builder.GetInsertBlock());
+    Call->setDebugLoc(DebugLoc::get(Location.Line, Location.Column, *Scope));
   }
 }
 
