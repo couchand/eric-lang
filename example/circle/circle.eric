@@ -22,11 +22,52 @@ external (integer ch) integer putchar
 function () integer newline
   putchar(10)
 
+function () integer dot
+  putchar(46)
+
 function (integer i) integer puti
-  putchar(i + 48) + newline()
+  putchar(i + 48)
+
+function (boolean z) boolean not
+  boolean(
+    1 - integer(z)
+  )
+
+function (boolean cond, integer a, integer b) integer pick
+  (
+    integer(cond)
+      *
+    a
+  )
+    +
+  (
+    integer(
+      not(cond)
+    )
+      *
+    b
+  )
+
+function (integer i) integer putipadded
+  putchar(pick(i = 0, 32, 48 + i))
+
+function (number n) integer putTens
+  putipadded(integer(n * 0.1))
+
+function (number n) integer putOnes
+  puti(integer(n) - 10 * integer(n * 0.1))
+
+function (number n) integer putTenths
+  putOnes(10.0 * n)
+
+function (number n) integer putHundredths
+  putOnes(100.0 * n)
+
+function (number n) integer putThousandths
+  putOnes(1000.0 * n)
 
 function (number n) integer putn
-  puti(integer(n))
+  putTens(n) + putOnes(n) + dot() + putTenths(n) + putHundredths(n) + putThousandths(n)
 
 # main
 
@@ -35,7 +76,7 @@ function (integer x) integer tryi
     area(
       x
     )
-  )
+  ) + newline()
 
 tryi(1)
 tryi(2)
