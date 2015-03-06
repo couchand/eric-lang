@@ -1,0 +1,19 @@
+# first three squares
+
+external (integer ch) integer putchar
+
+function () integer newline
+  putchar(10)
+
+function (integer v) integer putv
+  putchar(v + 48)
+
+function (integer x) integer square
+  x * x
+
+function (integer x) integer putSquare
+  putv(square(x)) + newline()
+
+putSquare(1)
+putSquare(2)
+putSquare(3)

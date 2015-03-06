@@ -1,0 +1,42 @@
+# area of a circle
+
+function (integer x) integer square
+  x * x
+
+function (number x) number timesPi
+  x * 3.14159265358979
+
+function (integer x) number area
+  timesPi(
+    number(
+      square(
+        x
+      )
+    )
+  )
+
+# display routines
+
+external (integer ch) integer putchar
+
+function () integer newline
+  putchar(10)
+
+function (integer i) integer puti
+  putchar(i + 48) + newline()
+
+function (number n) integer putn
+  puti(integer(n))
+
+# main
+
+function (integer x) integer tryi
+  putn(
+    area(
+      x
+    )
+  )
+
+tryi(1)
+tryi(2)
+tryi(3)
