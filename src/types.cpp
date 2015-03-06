@@ -110,7 +110,7 @@ void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) 
   BasicTypeData *booleanType = new BasicTypeData(
     "boolean",
     llvm::TypeBuilder<llvm::types::i<1>, true>::get(context),
-    builder->createBasicType("integer", 1, 1, llvm::dwarf::DW_ATE_boolean)
+    builder->createBasicType("boolean", 1, 1, llvm::dwarf::DW_ATE_boolean)
   );
 
   BasicTypeData *integerType = new BasicTypeData(
