@@ -27,9 +27,6 @@ static std::map<std::string, FunctionTypeData *> FunctionTypes;
 
 void InitializeTypecheck() {
   LLVMContext &Context = getGlobalContext();
-
-  FunctionTypes["number"] = (FunctionTypeData *)TypeData::getType("(integer)number");
-  FunctionTypes["integer"] = (FunctionTypeData *)TypeData::getType("(number)integer");
 }
 
 TypeData *BooleanExprAST::Typecheck() {
@@ -83,6 +80,31 @@ TypeData *BinaryExprAST::Typecheck() {
 }
 
 TypeData *CallExprAST::Typecheck() {
+  if (Callee == "integer" || Callee == "number" || Callee == "boolean") {
+    if (Args.size() != 1) {
+      std::string message = "Cast to ";
+      message += Callee;
+      message += " expects a single parameter";
+      return ErrorT(this, message.c_str());
+    }
+
+    TypeData *argType = Args[0]->Typecheck();
+
+    std::string typeslug = "(";
+    typeslug += argType->getName();
+    typeslug += ")";
+    typeslug += Callee;
+
+    TypeData *fnType = TypeData::getType(typeslug.c_str());
+    if (!fnType) {
+      std::string message = "Unable to find cast for ";
+      message += typeslug;
+      return ErrorT(this, message.c_str());
+    }
+
+    return TypeData::getType(Callee);
+  }
+
   FunctionTypeData* FT = FunctionTypes[Callee];
 
   if (!FT) {

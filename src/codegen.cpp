@@ -271,12 +271,6 @@ Value *CallExprAST::Codegen() {
       Value *Source = Args[0]->Codegen();
       if (!Source) return 0;
 
-      std::string message = "Casting ";
-      message += source->getName();
-      message += " to ";
-      message += target->getName();
-      fprintf(stdout, "Casting %s to %s\n", source->getName().c_str(), target->getName().c_str());
-
       return source->convertTo(Builder, target, Source);
     }
     else {
