@@ -299,6 +299,17 @@ Value *CallExprAST::Codegen() {
   return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
+Value *BlockExprAST::Codegen() {
+  Value * v;
+
+  for (unsigned i = 0, e = Statements.size(); i < e; i++) {
+    EricDebugInfo.emitLocation(Statements[i]);
+    v = Statements[i]->Codegen();
+  }
+
+  return v;
+}
+
 Function *PrototypeAST::Codegen() {
   FunctionType *FT = (FunctionType *)Typecheck()->getLLVMType();
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);

@@ -132,6 +132,19 @@ TypeData *CallExprAST::Typecheck() {
   return FT->getReturnType();
 }
 
+TypeData *BlockExprAST::Typecheck() {
+  if (Statements.size() == 0) {
+    return ErrorT(this, "Block should have at least one statement");
+  }
+  TypeData *t;
+  for (int i = 0, e = Statements.size(); i < e; i++) {
+    t = Statements[i]->Typecheck();
+
+    if (!t) return 0;
+  }
+  return t;
+}
+
 FunctionTypeData *PrototypeAST::Typecheck() {
   TypeData *ReturnType = TypeData::getType(Returns);
   if (!ReturnType) {

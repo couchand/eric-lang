@@ -34,19 +34,9 @@ function (boolean z) boolean not
   )
 
 function (boolean cond, integer a, integer b) integer pick
-  (
-    integer(cond)
-      *
-    a
-  )
+  (integer(cond) * a)
     +
-  (
-    integer(
-      not(cond)
-    )
-      *
-    b
-  )
+  (integer(not(cond)) * b)
 
 function (integer i) integer putipadded
   putchar(pick(i = 0, 32, 48 + i))
@@ -67,16 +57,26 @@ function (number n) integer putThousandths
   putOnes(1000.0 * n)
 
 function (number n) integer putn
-  putTens(n) + putOnes(n) + dot() + putTenths(n) + putHundredths(n) + putThousandths(n)
+{
+  putTens(n)
+  putOnes(n)
+  dot()
+  putTenths(n)
+  putHundredths(n)
+  putThousandths(n)
+}
 
 # main
 
 function (integer x) integer tryi
+{
   putn(
     area(
       x
     )
-  ) + newline()
+  )
+  newline()
+}
 
 tryi(1)
 tryi(2)

@@ -84,6 +84,15 @@ public:
   virtual TypeData *Typecheck();
 };
 
+class BlockExprAST : public ExprAST {
+  std::vector<ExprAST *> Statements;
+public:
+  BlockExprAST(SourceLocation loc, std::vector<ExprAST *> &statements)
+    : ExprAST(loc), Statements(statements) {}
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
 class PrototypeAST {
   SourceLocation Location;
 

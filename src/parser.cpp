@@ -118,10 +118,41 @@ static ExprAST *ParseIdentifierExpr() {
   return new CallExprAST(loc, IdName, Args);
 }
 
+// blockexpr :: expression+
+static ExprAST *ParseBlockExpression() {
+  if ('{' != getCurrentToken()) {
+    return Error("Expecting { to start block");
+  }
+  getNextToken(); // eat '{'
+
+  std::vector<ExprAST *> statements;
+  int tok;
+  while (1) {
+    statements.push_back(ParseExpression());
+
+    if (!statements.back()) {
+      return 0;
+    }
+
+    tok = getCurrentToken();
+
+    if (tok == '}') {
+      getNextToken(); // eat }
+      break;
+    }
+    if (tok == -1) {
+      return Error("Expecting } to end block");
+    }
+  }
+
+  return new BlockExprAST(getCurrentLocation(), statements);
+}
+
 // primary
 //    ::= identifierexpr
 //    ::= numberexpr
 //    ::= parenexpr
+//    ::= blockexpr
 static ExprAST *ParsePrimary() {
   switch (CurTok) {
   default: return Error("expecting a primary expression");
@@ -135,6 +166,7 @@ static ExprAST *ParsePrimary() {
     return ParseBooleanExpr();
 
   case '(':             return ParseParenExpr();
+  case '{':             return ParseBlockExpression();
   }
 }
 
