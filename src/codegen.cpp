@@ -218,6 +218,7 @@ Value *BinaryExprAST::Codegen() {
 
   Type *LT = LHS->Typecheck()->getLLVMType();
 
+  EricDebugInfo.emitLocation(this);
   if (T->isIntegerTy(1)) {
     switch (Op) {
     default: return ErrorV(this, "invalid binary operator");
@@ -296,6 +297,7 @@ Value *CallExprAST::Codegen() {
     if (!ArgsV.back()) return 0;
   }
 
+  EricDebugInfo.emitLocation(this);
   return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
