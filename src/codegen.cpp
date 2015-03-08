@@ -298,7 +298,14 @@ Value *CallExprAST::Codegen() {
   }
 
   EricDebugInfo.emitLocation(this);
-  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+
+  FunctionTypeData* fnType = FunctionTypeData::getFunctionType(Callee);
+  if (fnType->getReturnType()->getName() == "void") {
+    return Builder.CreateCall(CalleeF, ArgsV);
+  }
+  else {
+    return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+  }
 }
 
 Value *BlockExprAST::Codegen() {
@@ -400,7 +407,12 @@ Function *FunctionAST::Codegen() {
     return 0;
   }
 
-  Builder.CreateRet(RetVal);
+  if (Proto->Typecheck()->getReturnType()->getName() == "void") {
+    Builder.CreateRetVoid();
+  }
+  else {
+    Builder.CreateRet(RetVal);
+  }
 
   EricDebugInfo.LexicalBlocks.pop_back();
 

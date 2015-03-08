@@ -5,6 +5,7 @@
 // static methods
 
 std::map<std::string, TypeData *> TypeData::types;
+std::map<std::string, FunctionTypeData *> FunctionTypeData::functionTypes;
 
 TypeData *TypeData::getType(std::string name) {
   return TypeData::types[name];
@@ -12,6 +13,14 @@ TypeData *TypeData::getType(std::string name) {
 
 void TypeData::registerType(TypeData *type) {
   TypeData::types[type->getName()] = type;
+}
+
+FunctionTypeData *FunctionTypeData::getFunctionType(std::string name) {
+  return FunctionTypeData::functionTypes[name];
+}
+
+void FunctionTypeData::registerFunctionType(std::string name, FunctionTypeData *type) {
+  FunctionTypeData::functionTypes[name] = type;
 }
 
 // basic type methods
@@ -107,6 +116,12 @@ llvm::Value *convertNumberToInteger(llvm::IRBuilder<> irBuilder, llvm::Value *va
 
 void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) {
 
+  BasicTypeData *voidType = new BasicTypeData(
+    "void",
+    llvm::Type::getVoidTy(context),
+    llvm::DIType()
+  );
+
   BasicTypeData *booleanType = new BasicTypeData(
     "boolean",
     llvm::TypeBuilder<llvm::types::i<1>, true>::get(context),
@@ -132,6 +147,7 @@ void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) 
   numberType ->addConversion(booleanType, convertNumberToBoolean );
   numberType ->addConversion(integerType, convertNumberToInteger );
 
+  TypeData::registerType(voidType);
   TypeData::registerType(booleanType);
   TypeData::registerType(integerType);
   TypeData::registerType(numberType);

@@ -23,7 +23,6 @@ FunctionTypeData *ErrorFT(SourceLocation loc, const char *message) {
 }
 
 static std::map<std::string, TypeData *> NamedValueTypes;
-static std::map<std::string, FunctionTypeData *> FunctionTypes;
 
 void InitializeTypecheck() {
   LLVMContext &Context = getGlobalContext();
@@ -105,7 +104,7 @@ TypeData *CallExprAST::Typecheck() {
     return TypeData::getType(Callee);
   }
 
-  FunctionTypeData* FT = FunctionTypes[Callee];
+  FunctionTypeData* FT = FunctionTypeData::getFunctionType(Callee);
 
   if (!FT) {
     std::string message = "Unknown function reference: ";
@@ -146,11 +145,14 @@ TypeData *BlockExprAST::Typecheck() {
 }
 
 FunctionTypeData *PrototypeAST::Typecheck() {
-  TypeData *ReturnType = TypeData::getType(Returns);
-  if (!ReturnType) {
-    std::string message = "Unknown return type in function prototype: ";
-    message += Returns;
-    return ErrorFT(Location, message.c_str());
+  TypeData *ReturnType;
+  if (Returns != "") {
+    ReturnType = TypeData::getType(Returns);
+    if (!ReturnType) {
+      std::string message = "Unknown return type in function prototype: ";
+      message += Returns;
+      return ErrorFT(Location, message.c_str());
+    }
   }
 
   std::vector<TypeData *> Params;
@@ -168,7 +170,7 @@ FunctionTypeData *PrototypeAST::Typecheck() {
 
   FunctionTypeData *FT = new FunctionTypeData(ReturnType, Params);
 
-  FunctionTypes[Name] = FT;
+  FunctionTypeData::registerFunctionType(Name, FT);
 
   return FT;
 }
@@ -183,6 +185,10 @@ FunctionTypeData *FunctionAST::Typecheck() {
   if (!BodyType) return 0;
 
   TypeData* ReturnType = T->getReturnType();
+
+  if (ReturnType->getName() == "void")
+    return T;
+
   TypeData* Coalesced = makeCompatible(ReturnType, BodyType);
   if (!Coalesced) {
     std::string message = "Incompatible types in definition of: ";

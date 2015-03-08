@@ -48,6 +48,7 @@ void InitializeLexer() {
   Keywords["function"]  = tok_function;
   Keywords["false"]     = tok_false;
   Keywords["true"]      = tok_true;
+  Keywords["void"]      = tok_void;
 
 }
 

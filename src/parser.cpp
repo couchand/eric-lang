@@ -254,10 +254,16 @@ static PrototypeAST *ParsePrototype() {
     getNextToken(); // eat ,
   }
 
-  if (getNextToken() != tok_identifier)
-    return ErrorP("Expected return type in prototype");
+  std::string Returns;
+  if (getNextToken() == tok_void) {
+    Returns = "void";
+  }
+  else {
+    if (getCurrentToken() != tok_identifier)
+      return ErrorP("Expected void or return type in prototype");
 
-  std::string Returns = getIdentifierStr();
+    Returns = getIdentifierStr();
+  }
 
   if (getNextToken() != tok_identifier)
     return ErrorP("Expected function name in prototype");

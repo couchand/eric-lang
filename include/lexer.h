@@ -25,6 +25,9 @@ enum Token {
   // boolean literals
   tok_false = -9, tok_true = -10,
 
+  // void
+  tok_void = -11,
+
 };
 
 int gettok();

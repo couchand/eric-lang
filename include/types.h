@@ -36,6 +36,8 @@ class FunctionTypeData : public TypeData {
   TypeData *returnType;
   std::vector<TypeData *> parameterTypes;
 
+  static std::map<std::string, FunctionTypeData *> functionTypes;
+
 public:
   FunctionTypeData(TypeData *returns, std::vector<TypeData *> takes)
   : returnType(returns), parameterTypes(takes) {}
@@ -47,6 +49,9 @@ public:
   unsigned getNumParameters() { return parameterTypes.size(); }
   TypeData *getParameterType(unsigned i) { return parameterTypes[i]; }
   TypeData *getReturnType() { return returnType; }
+
+  static FunctionTypeData *getFunctionType(std::string name);
+  static void registerFunctionType(std::string name, FunctionTypeData *type);
 };
 
 class BasicTypeData : public TypeData {
