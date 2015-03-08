@@ -341,6 +341,7 @@ Value *ConditionalExprAST::Codegen() {
   // emit consequent
   Builder.SetInsertPoint(consequentBlock);
 
+  EricDebugInfo.emitLocation(Consequent);
   Value *consequentResult = Consequent->Codegen();
   if (!consequentResult) return 0;
 
@@ -351,6 +352,7 @@ Value *ConditionalExprAST::Codegen() {
   parentFunction->getBasicBlockList().push_back(alternateBlock);
   Builder.SetInsertPoint(alternateBlock);
 
+  EricDebugInfo.emitLocation(Alternate);
   Value *alternateResult = Alternate->Codegen();
   if (!alternateResult) return 0;
 
@@ -363,6 +365,7 @@ Value *ConditionalExprAST::Codegen() {
 
   TypeData *mergedType = Typecheck();
 
+  EricDebugInfo.emitLocation(this);
   PHINode *phi = Builder.CreatePHI(mergedType->getLLVMType(), 2, "iftmp");
   phi->addIncoming(consequentResult, consequentBlock);
   phi->addIncoming(alternateResult, alternateBlock);
