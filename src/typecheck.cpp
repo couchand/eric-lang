@@ -144,6 +144,27 @@ TypeData *BlockExprAST::Typecheck() {
   return t;
 }
 
+TypeData *ConditionalExprAST::Typecheck() {
+  TypeData *conditionType = Condition->Typecheck();
+  if (!conditionType) return 0;
+  if (conditionType != TypeData::getType("boolean")) {
+    return ErrorT(this, "Condition should be boolean type");
+  }
+
+  TypeData *consequentType = Consequent->Typecheck();
+  if (!consequentType) return 0;
+
+  TypeData *alternateType = Alternate->Typecheck();
+  if (!alternateType) return 0;
+
+  TypeData *coalesced = makeCompatible(consequentType, alternateType);
+  if (!coalesced) {
+    return ErrorT(this, "Incompatible types in condition");
+  }
+
+  return coalesced;
+}
+
 FunctionTypeData *PrototypeAST::Typecheck() {
   TypeData *ReturnType;
   if (Returns != "") {

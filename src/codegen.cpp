@@ -323,6 +323,53 @@ Value *BlockExprAST::Codegen() {
   return v;
 }
 
+Value *ConditionalExprAST::Codegen() {
+  // blocks
+  Function *parentFunction = Builder.GetInsertBlock()->getParent();
+
+  BasicBlock *consequentBlock = BasicBlock::Create(getGlobalContext(), "then", parentFunction);
+  BasicBlock *alternateBlock = BasicBlock::Create(getGlobalContext(), "else");
+  BasicBlock *mergeBlock = BasicBlock::Create(getGlobalContext(), "ifmerge");
+
+  // emit condition
+  Value *conditionValue = Condition->Codegen();
+  if (!conditionValue) return 0;
+
+  EricDebugInfo.emitLocation(this);
+  Builder.CreateCondBr(conditionValue, consequentBlock, alternateBlock);
+
+  // emit consequent
+  Builder.SetInsertPoint(consequentBlock);
+
+  Value *consequentResult = Consequent->Codegen();
+  if (!consequentResult) return 0;
+
+  Builder.CreateBr(mergeBlock);
+  consequentBlock = Builder.GetInsertBlock(); // in case of nested blocks
+
+  // emit alternate
+  parentFunction->getBasicBlockList().push_back(alternateBlock);
+  Builder.SetInsertPoint(alternateBlock);
+
+  Value *alternateResult = Alternate->Codegen();
+  if (!alternateResult) return 0;
+
+  Builder.CreateBr(mergeBlock);
+  alternateBlock = Builder.GetInsertBlock(); // in case of nested blocks
+
+  // emit merge
+  parentFunction->getBasicBlockList().push_back(mergeBlock);
+  Builder.SetInsertPoint(mergeBlock);
+
+  TypeData *mergedType = Typecheck();
+
+  PHINode *phi = Builder.CreatePHI(mergedType->getLLVMType(), 2, "iftmp");
+  phi->addIncoming(consequentResult, consequentBlock);
+  phi->addIncoming(alternateResult, alternateBlock);
+
+  return phi;
+}
+
 Function *PrototypeAST::Codegen() {
   FunctionType *FT = (FunctionType *)Typecheck()->getLLVMType();
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);

@@ -93,6 +93,17 @@ public:
   virtual TypeData *Typecheck();
 };
 
+class ConditionalExprAST : public ExprAST {
+  ExprAST *Condition;
+  ExprAST *Consequent;
+  ExprAST *Alternate;
+public:
+  ConditionalExprAST(SourceLocation loc, ExprAST *cond, ExprAST *cons, ExprAST *alt)
+    : ExprAST(loc), Condition(cond), Consequent(cons), Alternate(alt) {}
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
 class PrototypeAST {
   SourceLocation Location;
 

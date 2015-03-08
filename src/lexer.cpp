@@ -49,6 +49,8 @@ void InitializeLexer() {
   Keywords["false"]     = tok_false;
   Keywords["true"]      = tok_true;
   Keywords["void"]      = tok_void;
+  Keywords["if"]        = tok_if;
+  Keywords["else"]      = tok_else;
 
 }
 

@@ -118,8 +118,8 @@ static ExprAST *ParseIdentifierExpr() {
   return new CallExprAST(loc, IdName, Args);
 }
 
-// blockexpr :: expression+
-static ExprAST *ParseBlockExpression() {
+// blockexpr ::= expression+
+static ExprAST *ParseBlockExpr() {
   if ('{' != getCurrentToken()) {
     return Error("Expecting { to start block");
   }
@@ -148,9 +148,35 @@ static ExprAST *ParseBlockExpression() {
   return new BlockExprAST(getCurrentLocation(), statements);
 }
 
+// conditionalexpr ::= 'if' expression expression 'else' expression
+static ExprAST *ParseConditionalExpr() {
+  if (tok_if != getCurrentToken()) {
+    return Error("Expecting 'if' to start conditional");
+  }
+  getNextToken(); // eat 'if'
+
+  ExprAST *condition = ParseExpression();
+  if (!condition) return 0;
+
+  ExprAST *consequent = ParseExpression();
+  if (!consequent) return 0;
+
+  if (tok_else != getCurrentToken()) {
+    return Error("Expecting 'else' in conditional");
+  }
+  getNextToken(); // eat 'else'
+
+  ExprAST *alternate = ParseExpression();
+  if (!alternate) return 0;
+
+  return new ConditionalExprAST(getCurrentLocation(), condition, consequent, alternate);
+}
+
 // primary
 //    ::= identifierexpr
+//    ::= integerexpr
 //    ::= numberexpr
+//    ::= conditionalexpr
 //    ::= parenexpr
 //    ::= blockexpr
 static ExprAST *ParsePrimary() {
@@ -160,13 +186,14 @@ static ExprAST *ParsePrimary() {
   case tok_identifier:  return ParseIdentifierExpr();
   case tok_integer:     return ParseIntegerExpr();
   case tok_number:      return ParseNumberExpr();
+  case tok_if:          return ParseConditionalExpr();
 
   case tok_false:
   case tok_true:
     return ParseBooleanExpr();
 
   case '(':             return ParseParenExpr();
-  case '{':             return ParseBlockExpression();
+  case '{':             return ParseBlockExpr();
   }
 }
 

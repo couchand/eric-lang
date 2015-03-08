@@ -28,6 +28,9 @@ enum Token {
   // void
   tok_void = -11,
 
+  // if and else
+  tok_if = -12, tok_else = -13,
+
 };
 
 int gettok();
