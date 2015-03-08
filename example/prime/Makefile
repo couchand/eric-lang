@@ -1,0 +1,15 @@
+CLI=../../cli
+
+all: prime
+
+prime.ll: prime.eric $(CLI)
+	cat $< | $(CLI) -c $< 2> $@
+
+prime.s: prime.ll
+	llc -o $@ $<
+
+prime: prime.s
+	clang++-3.5 -o $@ $<
+
+clean:
+	rm -f *.ll *.s prime

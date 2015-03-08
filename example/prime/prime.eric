@@ -1,0 +1,45 @@
+# primality test
+
+external (integer ch) integer putchar
+
+function (integer i) integer puti
+  putchar(i + 48)
+
+function (integer n, integer i) boolean isDivisibleBy
+  0 = n % i
+
+function (integer n, integer i) boolean checkPrime
+  if n / i < i
+    true
+  else if isDivisibleBy(n, i)
+    false
+  else
+    checkPrime(n, i + 1)
+
+function (integer n) boolean isPrime
+  if n < 2
+    false
+  else if n = 2
+    true
+  else
+    checkPrime(n, 2)
+
+function (integer n) void testPrime
+{
+  puti(n)
+  putchar(32)
+  if isPrime(n)
+    putchar(33)
+  else
+    0
+  putchar(10)
+}
+
+testPrime(2)
+testPrime(3)
+testPrime(4)
+testPrime(5)
+testPrime(6)
+testPrime(7)
+testPrime(8)
+testPrime(9)
