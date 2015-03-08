@@ -187,7 +187,9 @@ void InstallDefaultPrecedence() {
   BinopPrecedence['<'] = 10;
   BinopPrecedence['+'] = 20;
   BinopPrecedence['-'] = 20;
+  BinopPrecedence['%'] = 35;
   BinopPrecedence['*'] = 40;
+  BinopPrecedence['/'] = 40;
 }
 
 // binoprhs := (op primary)*

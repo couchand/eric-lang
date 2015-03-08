@@ -240,6 +240,8 @@ Value *BinaryExprAST::Codegen() {
     case '+': return Builder.CreateFAdd(L, R, "addtmp");
     case '-': return Builder.CreateFSub(L, R, "subtmp");
     case '*': return Builder.CreateFMul(L, R, "multmp");
+    case '/': return Builder.CreateFDiv(L, R, "divtmp");
+    case '%': return Builder.CreateFRem(L, R, "remtmp");
     }
   }
   else if (T->isIntegerTy()) {
@@ -248,6 +250,8 @@ Value *BinaryExprAST::Codegen() {
     case '+': return Builder.CreateAdd(L, R, "addtmp");
     case '-': return Builder.CreateSub(L, R, "subtmp");
     case '*': return Builder.CreateMul(L, R, "multmp");
+    case '/': return Builder.CreateSDiv(L, R, "divtmp");
+    case '%': return Builder.CreateSRem(L, R, "remtmp");
     }
   }
   return ErrorV(this, "invalid types in binary operator");
