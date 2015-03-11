@@ -11,6 +11,7 @@ int getNextToken();
 FunctionAST *ParseTopLevelExpr();
 FunctionAST *ParseFunctionDefinition();
 PrototypeAST *ParseExternalDeclaration();
+ValueTypeAST *ParseValueTypeDefinition();
 
 void InstallDefaultPrecedence();
 

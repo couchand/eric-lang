@@ -87,6 +87,58 @@ llvm::DIType FunctionTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *d
   return diBuilder->createSubroutineType(*where, paramTypeArray);
 }
 
+// struct type methods
+
+llvm::Type *StructTypeData::getLLVMType() {
+  llvm::SmallVector<llvm::Type *, 8> fTypes;
+
+  //fprintf(stdout, "getting llvm type for %s\n", name.c_str());
+
+  for (unsigned i = 0, e = fieldTypes.size(); i < e; i++) {
+    std::string field = fieldNames[i];
+    TypeData *fieldType = fieldTypes[i];
+    if (!fieldType) return 0;
+
+    fTypes.push_back(fieldType->getLLVMType());
+    if (!fTypes.back()) return 0;
+  }
+
+  //return llvm::StructType::create(fTypes, name);
+  return llvm::StructType::get(llvm::getGlobalContext(), fTypes);
+}
+
+llvm::DIType StructTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
+  return diBuilder->createBasicType("integer", 64, 64, llvm::dwarf::DW_ATE_signed);
+//  SmallVector<Type *, 8> elTypes;
+//  SmallVector<Value *, 8> fields;
+//  for (unsigned i = 0, e = ElementTypes.size(); i < e; i++) {
+//    std::string element = ElementNames[i];
+//    TypeData *elType = TypeData::getType(ElementTypes[element]);
+//    if (!elType) return 0;
+//
+//    elTypes.push_back(elType->getLLVMType());
+//    if (!elTypes.back()) return 0;
+//
+//    uint64_t elsize = DL->getTypeSizeInBits(elTypes.back());
+//    uint64_t elalign = DL->getABITypeAlignment(elTypes.back());
+//    uint64_t eloffset = 0;
+//    DIType t = elType->getDIType(&EricDebugInfo.Unit, DBuilder);
+//
+//    fields.push_back(DBuilder->createMemberType(DIDescriptor(), element, EricDebugInfo.Unit, Location.Line, elsize, elalign, eloffset, 0, t));
+//    if (!fields.back()) return 0;
+//  }
+//
+//  StructType *llvmType = StructType::create(getGlobalContext(), elTypes, Name);
+//
+//  uint64_t size = DL->getTypeSizeInBits(llvmType);
+//  uint64_t align = DL->getABITypeAlignment(llvmType);
+//  uint64_t offset = 0;
+//
+//  DIArray elements = DBuilder->getOrCreateArray(fields);
+//
+//  DICompositeType diType = DBuilder->createStructType(DIDescriptor(), Name, EricDebugInfo.Unit, Location.Line, size, align, offset, DIType(), elements);
+}
+
 // basic types
 
 llvm::Value *convertBooleanToInteger(llvm::IRBuilder<> irBuilder, llvm::Value *value) {

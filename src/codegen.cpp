@@ -33,6 +33,7 @@ Function *ErrorF2(SourceLocation loc, const char *message) {
 // GLOBALS
 
 static Module *TheModule;
+static DataLayout *DL;
 static IRBuilder<> Builder(getGlobalContext());
 static std::map<std::string, Value*> NamedValues;
 
@@ -79,6 +80,10 @@ void DebugInfo::emitLocation(int line, int column) {
 
 // functions
 
+void InitializeDataLayout(Module *m) {
+  DL = new DataLayout(m);
+}
+
 void InitializeCodegen(const char *filename) {
   LLVMContext &Context = getGlobalContext();
   TheModule = new Module("eric repl", Context);
@@ -99,6 +104,7 @@ void InitializeCodegen(const char *filename) {
 
   EricDebugInfo.Unit = DBuilder->createFile(EricDebugInfo.Module.getFilename(), EricDebugInfo.Module.getDirectory());
 
+  InitializeDataLayout(TheModule);
   InitializeBasicTypes(Context, DBuilder);
 }
 
@@ -232,6 +238,12 @@ Value *BinaryExprAST::Codegen() {
         return Builder.CreateFCmpUEQ(L, R, "cmptmp");
       if (LT->isIntegerTy())
         return Builder.CreateICmpEQ(L, R, "cmptmp");
+    case '&':
+      if (LT->isIntegerTy(1))
+        return Builder.CreateAnd(L, R, "cmptmp");
+    case '|':
+      if (LT->isIntegerTy(1))
+        return Builder.CreateOr(L, R, "cmptmp");
     }
   }
   else if (T->isFloatingPointTy()) {
@@ -304,12 +316,74 @@ Value *CallExprAST::Codegen() {
   EricDebugInfo.emitLocation(this);
 
   FunctionTypeData* fnType = FunctionTypeData::getFunctionType(Callee);
-  if (fnType->getReturnType()->getName() == "void") {
+
+  std::string retType = fnType->getReturnType()->getName();
+  //fprintf(stdout, "func call %s returns %s\n", Callee.c_str(), retType.c_str());
+
+  //for (unsigned i = 0, e = fnType->getNumParameters(); i < e; i++) {
+  //  fprintf(stdout, "  p %i type %s\n", i, fnType->getParameterType(i)->getName().c_str());
+  //}
+
+  if (retType == "void") {
     return Builder.CreateCall(CalleeF, ArgsV);
   }
   else {
     return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
   }
+}
+
+Value *ValueLiteralAST::Codegen() {
+  TypeData *myType = Typecheck();
+  if (!myType) return 0;
+
+  Type *myT = myType->getLLVMType();
+  if (!myT) return 0;
+
+  Value *structValue = UndefValue::get(myT);
+
+  EricDebugInfo.emitLocation(this);
+
+  for (unsigned i = 0, e = Fields.size(); i < e; i++) {
+    EricDebugInfo.emitLocation(Fields[i]);
+
+    Value *fieldValue = Fields[i]->Codegen();
+    if (!fieldValue) return 0;
+
+    EricDebugInfo.emitLocation(this);
+    structValue = Builder.CreateInsertValue(structValue, fieldValue, i);
+  }
+
+  return structValue;
+}
+
+Value *ValueReferenceAST::Codegen() {
+  Value *V = NamedValues[Name];
+
+  if (!V) {
+    std::string message = "Unknown variable name: '";
+    message += Name;
+    message += "'";
+    return ErrorV(this, message.c_str());
+  }
+
+  std::string soFar = Name;
+
+  for (unsigned i = 0, e = References.size(); i < e; i++) {
+    StructTypeData *st = ReferenceTypes[i];
+    int idx = st->getFieldIndex(References[i]);
+
+    if (-1 == idx) {
+      std::string message = "Variable ";
+      message += soFar;
+      message += " has no field named ";
+      message += References[i];
+      return ErrorV(this, message.c_str());
+    }
+
+    V = Builder.CreateExtractValue(V, idx);
+  }
+
+  return V;
 }
 
 Value *BlockExprAST::Codegen() {
@@ -366,11 +440,40 @@ Value *ConditionalExprAST::Codegen() {
   TypeData *mergedType = Typecheck();
 
   EricDebugInfo.emitLocation(this);
-  PHINode *phi = Builder.CreatePHI(mergedType->getLLVMType(), 2, "iftmp");
-  phi->addIncoming(consequentResult, consequentBlock);
-  phi->addIncoming(alternateResult, alternateBlock);
 
-  return phi;
+  if (mergedType->getName() == "void") {
+    return UndefValue::get(TypeBuilder<types::i<1>, true>::get(getGlobalContext()));
+  }
+  else
+  {
+    PHINode *phi = Builder.CreatePHI(mergedType->getLLVMType(), 2, "iftmp");
+    phi->addIncoming(consequentResult, consequentBlock);
+    phi->addIncoming(alternateResult, alternateBlock);
+    return phi;
+  }
+}
+
+TypeData *ValueTypeAST::MakeType() {
+  //fprintf(stderr, "creating type %s\n", Name.c_str());
+
+
+  std::vector<TypeData *> ts;
+  for (unsigned i = 0, e = ElementNames.size(); i < e; i++) {
+    //fprintf(stdout, "   element %i %s type %s\n", i, ElementNames[i].c_str(), ElementTypes[i].c_str());
+
+    TypeData *t = TypeData::getType(ElementTypes[i]);
+    if (!t) {
+      fprintf(stderr, "Unknown field type %s for %s\n", ElementTypes[i].c_str(), ElementNames[i].c_str());
+      return 0;
+    }
+
+    ts.push_back(t);
+  }
+
+  TypeData *typeData = new StructTypeData(Name, ts, ElementNames);
+  //fprintf(stderr, "registering type %s\n", Name.c_str());
+  TypeData::registerType(typeData);
+  return typeData;
 }
 
 Function *PrototypeAST::Codegen() {

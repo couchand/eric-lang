@@ -61,12 +61,35 @@ static Function* handleExternalDeclaration() {
   return 0;
 }
 
+static void handleValueTypeDefinition() {
+  ValueTypeAST *valueType = ParseValueTypeDefinition();
+
+  if (valueType) {
+    StructTypeData *t = (StructTypeData *)valueType->MakeType();
+
+    //fprintf(stdout, "New type %s created\n", t->getName().c_str());
+
+    for (unsigned i = 0, e = t->getNumFields(); i < e; i++) {
+      TypeData *ft = t->getFieldType(i);
+      if (!ft) {
+        fprintf(stdout, "err on field %i\n", i);
+        return;
+      }
+      //fprintf(stdout, "  field %i type %s\n", i, ft->getName().c_str());
+    }
+  }
+  else {
+    getNextToken();
+  }
+}
+
 static void handleNext(int token) {
   Function* code;
   switch (token) {
     default:            code = handleTopLevelExpression(); break;
     case tok_function:  code = handleFunctionDefinition(); break;
     case tok_external:  code = handleExternalDeclaration(); break;
+    case tok_value:     handleValueTypeDefinition(); break;
   }
 
   if (code && showPrompt) {

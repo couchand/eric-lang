@@ -49,7 +49,7 @@ function (integer n) void testPrime
 }
 
 function (integer max, integer current) integer testPrimes
-  if current < max
+  if (current < max)
   {
     testPrime(current)
     testPrimes(max, current + 1)

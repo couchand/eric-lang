@@ -1,0 +1,121 @@
+# quaternions
+#   value structure type motivating example
+
+external (integer ch) integer putchar
+
+value quaternion
+{
+  number r
+  number i
+  number j
+  number k
+}
+
+function (number a, number b, number c, number d) quaternion makeQuaternion
+  quaternion {a, b, c, d}
+
+function (quaternion q) quaternion negate
+  makeQuaternion(0.0-q.r, 0.0-q.i, 0.0-q.j, 0.0-q.k)
+
+function (quaternion q) quaternion conjugate
+  makeQuaternion(q.r, 0.0-q.i, 0.0-q.j, 0.0-q.k)
+
+function (quaternion q, number n) quaternion addReal
+  makeQuaternion(q.r + n, q.i, q.j, q.k)
+
+function (quaternion q, quaternion r) quaternion addQuaternion
+  makeQuaternion(
+    q.r + r.r,
+    q.i + r.i,
+    q.j + r.j,
+    q.k + r.k
+  )
+
+function (quaternion q, number n) quaternion multiplyReal
+  makeQuaternion(
+    n * q.r,
+    n * q.i,
+    n * q.j,
+    n * q.k
+  )
+
+function (quaternion q, quaternion r) quaternion multiplyQuaternion
+  makeQuaternion(
+    q.r * r.r - q.i * r.i - q.j * r.j - q.k * r.k,
+    q.r * r.i + q.i * r.r + q.j * r.k - q.k * r.j,
+    q.r * r.j - q.i * r.k + q.j * r.r + q.k * r.i,
+    q.r * r.k + q.i * r.j - q.j * r.i + q.k * r.r
+  )
+
+function (boolean a, boolean b, boolean c, boolean d) boolean allFour
+  a & b & c & d
+
+function (quaternion a, quaternion b) boolean areEquivalent
+  allFour(
+    a.r = b.r,
+    a.i = b.i,
+    a.j = b.j,
+    a.k = b.k
+  )
+
+function (quaternion a, quaternion b) boolean multipliesCommutatively
+  areEquivalent(
+    multiplyQuaternion(a, b),
+    multiplyQuaternion(b, a)
+  )
+
+function () void newline putchar(10)
+
+function () void fail     { putchar(58) putchar(40) newline() }
+function () void succeed  { putchar(58) putchar(41) newline() }
+
+function (boolean x) boolean not if x false else true
+
+function (boolean x) void assert if x succeed() else fail()
+function (boolean x) void assertNot assert(not(x))
+
+function (quaternion a, quaternion b) void assertEquivalent
+  assert(areEquivalent(a, b))
+
+function (quaternion qa, quaternion qb, quaternion qc) void try
+{
+  negate(qa)
+
+  conjugate(qb)
+
+  addReal(qc, 42.0)
+
+  addQuaternion(qa, qb)
+
+  multiplyReal(qc, 42.0)
+
+  multiplyQuaternion(qa, qb)
+
+  assertNot(
+    multipliesCommutatively(qb, qc)
+  )
+
+  assertEquivalent(
+    negate(negate(qa)),
+    qa
+  )
+
+  assertEquivalent(
+    conjugate(conjugate(qa)),
+    qa
+  )
+
+  assertEquivalent(
+    addReal(qa, 42.0),
+    conjugate(
+      addReal(conjugate(qa), 42.0)
+    )
+  )
+
+}
+
+try(
+  makeQuaternion(1.0, 2.0, 3.0, 4.0),
+  makeQuaternion(2.0, 3.0, 4.0, 5.0),
+  makeQuaternion(3.0, 4.0, 5.0, 6.0)
+)

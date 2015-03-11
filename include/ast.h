@@ -78,8 +78,29 @@ class CallExprAST : public ExprAST {
   std::string Callee;
   std::vector<ExprAST*> Args;
 public:
-  CallExprAST(SourceLocation loc, const std::string &callee, std::vector<ExprAST*> &args)
+  CallExprAST(SourceLocation loc, const std::string &callee, const std::vector<ExprAST*> &args)
     : ExprAST(loc), Callee(callee), Args(args) {}
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
+class ValueLiteralAST : public ExprAST {
+  std::string ValueType;
+  std::vector<ExprAST*> Fields;
+public:
+  ValueLiteralAST(SourceLocation loc, const std::string &type, const std::vector<ExprAST*> &fields)
+    : ExprAST(loc), ValueType(type), Fields(fields) {}
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
+class ValueReferenceAST : public ExprAST {
+  std::string Name;
+  std::vector<std::string> References;
+  std::vector<StructTypeData *> ReferenceTypes;
+public:
+  ValueReferenceAST(SourceLocation loc, const std::string &name, const std::vector<std::string> &refs)
+    : ExprAST(loc), Name(name), References(refs) {}
   virtual Value *Codegen();
   virtual TypeData *Typecheck();
 };
@@ -102,6 +123,23 @@ public:
     : ExprAST(loc), Condition(cond), Consequent(cons), Alternate(alt) {}
   virtual Value *Codegen();
   virtual TypeData *Typecheck();
+};
+
+class ValueTypeAST {
+  SourceLocation Location;
+
+  std::string Name;
+  std::vector<std::string> ElementTypes;
+  std::vector<std::string> ElementNames;
+public:
+  ValueTypeAST(
+    SourceLocation loc,
+    const std::string &name,
+    const std::vector<std::string> &eltypes,
+    const std::vector<std::string> &elnames
+  ) : Location(loc), Name(name), ElementTypes(eltypes), ElementNames(elnames) {}
+
+  TypeData *MakeType();
 };
 
 class PrototypeAST {

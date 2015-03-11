@@ -23,6 +23,7 @@ public:
   virtual llvm::Type  *getLLVMType() = 0;
   virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder)   = 0;
 
+  virtual bool isStructType() { return false; }
   virtual bool canConvertTo(TypeData *other) { return false; }
   virtual llvm::Value *convertTo(llvm::IRBuilder<> builder, TypeData *other, llvm::Value *value) { return 0; }
   virtual TypeData *getConverterType(TypeData *other) { return 0; }
@@ -77,6 +78,38 @@ public:
   virtual llvm::Value *convertTo(llvm::IRBuilder<> builder, TypeData *other, llvm::Value *value);
   virtual TypeData *getConverterType(TypeData *other);
 };
+
+class StructTypeData : public TypeData {
+  std::string name;
+  std::vector<TypeData *> fieldTypes;
+  std::vector<std::string> fieldNames;
+
+public:
+  StructTypeData(std::string n, const std::vector<TypeData *> &fts, const std::vector<std::string> &fns)
+  : name(n), fieldTypes(fts), fieldNames(fns) {}
+
+  virtual std::string getName() { return name; }
+  virtual llvm::Type *getLLVMType();
+  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder);
+  virtual bool isStructType() { return true; }
+
+  unsigned getNumFields() { return fieldTypes.size(); }
+  TypeData *getFieldType(unsigned i) { return fieldTypes[i]; }
+  TypeData *getFieldType(std::string s) {
+    int i = getFieldIndex(s);
+    return i == -1 ? 0 : getFieldType(i);
+  }
+  int getFieldIndex(std::string s) {
+    for (unsigned i = 0, e = fieldNames.size(); i < e; i++) {
+      if (s == fieldNames[i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+};
+
+// static methods
 
 void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder);
 

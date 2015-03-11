@@ -27,6 +27,11 @@ ExprAST *Error(const char *message) {
   return 0;
 }
 
+ValueTypeAST * ErrorVT(const char *message) {
+  Error(message);
+  return 0;
+}
+
 PrototypeAST *ErrorP(const char *message) {
   Error(message);
   return 0;
@@ -78,44 +83,91 @@ static ExprAST* ParseParenExpr() {
   return V;
 }
 
+// helpers for identifierexpr
+
+static bool parseArgumentList(int ch, std::vector<ExprAST*> *Args) {
+  if (CurTok != ch) {
+    while (1) {
+
+      ExprAST *Arg = ParseExpression();
+      if (!Arg) return false;
+
+      Args->push_back(Arg);
+
+      if (CurTok == ch) break;
+
+      if (CurTok != ',') {
+        char buffer[40];
+        sprintf(buffer, "Expected '%c' or ',' in argument list", ch);
+        Error(buffer);
+        return false;
+      }
+
+      getNextToken(); // eat ,
+
+    }
+  }
+  return true;
+}
+
+static ExprAST *parseFunctionCall(std::string IdName, SourceLocation loc) {
+  getNextToken(); // eat (
+
+  std::vector<ExprAST*> *Args = new std::vector<ExprAST*>();
+  bool success = parseArgumentList(')', Args);
+  if (!success) return 0;
+
+  getNextToken(); // eat )
+
+  return new CallExprAST(loc, IdName, *Args);
+}
+
+static ExprAST *parseStructLiteral(std::string IdName, SourceLocation loc) {
+  getNextToken(); // eat {
+
+  std::vector<ExprAST*> *Args = new std::vector<ExprAST*>();
+  bool success = parseArgumentList('}', Args);
+  if (!success) return 0;
+
+  getNextToken(); // eat }
+
+  return new ValueLiteralAST(loc, IdName, *Args);
+}
+
+static ExprAST *parseStructReference(std::string IdName, SourceLocation loc) {
+  std::vector<std::string> references;
+
+  while (getCurrentToken() == '.') {
+    if (getNextToken() != tok_identifier)
+      return Error("Expecting identifier in struct reference");
+
+    references.push_back(getIdentifierStr());
+
+    getNextToken(); // eat identifier
+  }
+
+  return new ValueReferenceAST(loc, IdName, references);
+}
+
 // identifierexpr
 //    ::= identifier
+//    ::= identifier ('.' identifier)+
 //    ::= identifier '(' expression* ')'
+//    ::= identifier '{' expression* '}'
 static ExprAST *ParseIdentifierExpr() {
   std::string IdName = getIdentifierStr();
   SourceLocation loc = getCurrentLocation();
 
   getNextToken(); // eat the identifier
 
-  // simple variable reference
-  if (CurTok != '(')
-    return new VariableExprAST(loc, IdName);
+  //fprintf(stderr, "id %s, next tok %i as %c\n", IdName.c_str(), CurTok, CurTok);
 
-  // function call
-  getNextToken(); // eat (
-
-  std::vector<ExprAST*> Args;
-  if (CurTok != ')') {
-    while (1) {
-
-      ExprAST *Arg = ParseExpression();
-      if (!Arg) return 0;
-
-      Args.push_back(Arg);
-
-      if (CurTok == ')') break;
-
-      if (CurTok != ',')
-        return Error("Expected ')' or ',' in argument list");
-
-      getNextToken(); // eat ,
-
-    }
+  switch (CurTok) {
+  default:  return new VariableExprAST(loc, IdName);
+  case '(': return parseFunctionCall(IdName, loc);
+  case '{': return parseStructLiteral(IdName, loc);
+  case '.': return parseStructReference(IdName, loc);
   }
-
-  getNextToken(); // eat )
-
-  return new CallExprAST(loc, IdName, Args);
 }
 
 // blockexpr ::= expression+
@@ -210,6 +262,8 @@ static int GetTokPrecedence() {
 }
 
 void InstallDefaultPrecedence() {
+  BinopPrecedence['|'] =  7;
+  BinopPrecedence['&'] =  8;
   BinopPrecedence['='] = 10;
   BinopPrecedence['<'] = 10;
   BinopPrecedence['+'] = 20;
@@ -249,6 +303,44 @@ static ExprAST *ParseExpression() {
   if (!LHS) return 0;
 
   return ParseBinOpRHS(0, LHS);
+}
+
+// valuetype ::= 'value' id '{' (id id)+ '}'
+ValueTypeAST *ParseValueTypeDefinition() {
+  SourceLocation loc = getCurrentLocation();
+
+  if (getCurrentToken() != tok_value)
+    return ErrorVT("Expected value keyword in type defintion");
+
+  if (getNextToken() != tok_identifier)
+    return ErrorVT("Expected value type name");
+
+  std::string typeName = getIdentifierStr();
+
+  if (getNextToken() != '{')
+    return ErrorVT("Expected { to start value type ");
+
+  std::vector<std::string> elTypes;
+  std::vector<std::string> elNames;
+
+  while (getNextToken() != '}') {
+    if (getCurrentToken() != tok_identifier)
+      return ErrorVT("Expected element type");
+
+    elTypes.push_back(getIdentifierStr());
+
+    if (getNextToken() != tok_identifier)
+      return ErrorVT("Expected element name");
+
+    elNames.push_back(getIdentifierStr());
+  }
+
+  getNextToken(); // eat '}'
+
+  if (elTypes.size() == 0)
+    return ErrorVT("Expected at least one element in value type");
+
+  return new ValueTypeAST(loc, typeName, elTypes, elNames);
 }
 
 // prototype ::= '(' (id id (',' id id)*) ')' id id

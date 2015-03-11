@@ -78,7 +78,7 @@ int gettok() {
     return tok_identifier;
   }
 
-  if (isdigit(LastChar) || LastChar == '.') {
+  if (isdigit(LastChar)) {
     bool isDouble = false;
 
     std::string NumStr;

@@ -131,6 +131,82 @@ TypeData *CallExprAST::Typecheck() {
   return FT->getReturnType();
 }
 
+TypeData *ValueLiteralAST::Typecheck() {
+  TypeData *valueType = TypeData::getType(ValueType);
+  if (!valueType) {
+    std::string message = "No type found named ";
+    message += ValueType;
+    return ErrorT(this, message.c_str());
+  }
+
+  if (!valueType->isStructType())
+    return ErrorT(this, "Expected a structure type");
+
+  StructTypeData *st = (StructTypeData *)valueType;
+
+  if (Fields.size() != st->getNumFields())
+    return ErrorT(this, "Wrong number of fields in structure literal");
+
+  for (unsigned i = 0, e = Fields.size(); i < e; i++) {
+    TypeData *literalType = Fields[i]->Typecheck();
+    if (!literalType) return 0;
+
+    TypeData *expected = st->getFieldType(i);
+    TypeData *coalesced = makeCompatible(expected, literalType);
+    if (coalesced != expected) {
+      std::string message = "Incomaptible type in ";
+      message += ValueType;
+      message += " literal";
+      return ErrorT(this, message.c_str());
+    }
+  }
+
+  //fprintf(stdout, "type check for %s literal successful\n", ValueType.c_str());
+
+  return valueType;
+}
+
+TypeData *ValueReferenceAST::Typecheck() {
+  ReferenceTypes.clear();
+
+  TypeData *ref = NamedValueTypes[Name];
+  if (!ref) {
+    std::string message = "Unknown structure name: ";
+    message += Name;
+    return ErrorT(this, message.c_str());
+  }
+
+  std::string soFar = Name;
+
+  for (unsigned i = 0, e = References.size(); i < e; i++) {
+
+    if (!ref->isStructType()) {
+      std::string message = "Variable ";
+      message += soFar;
+      message += " is not a structure type";
+      return ErrorT(this, message.c_str());
+    }
+
+    StructTypeData *st = (StructTypeData *)ref;
+
+    ReferenceTypes.push_back(st);
+
+    ref = st->getFieldType(References[i]);
+
+    if (!ref) {
+      std::string message = "Variable ";
+      message += soFar;
+      message += " has no field named ";
+      message += References[i];
+      return ErrorT(this, message.c_str());
+    }
+
+    soFar += "." + References[i];
+  }
+
+  return ref;
+}
+
 TypeData *BlockExprAST::Typecheck() {
   if (Statements.size() == 0) {
     return ErrorT(this, "Block should have at least one statement");
