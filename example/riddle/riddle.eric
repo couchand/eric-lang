@@ -1,0 +1,711 @@
+# Captain Holt's riddle
+
+# which one is actually different?
+
+function (integer i) boolean differentIndex i = 1
+
+function () integer standardWeight 10
+function () integer differentWeight 17
+
+function (integer i) integer weight
+  if differentIndex(i)
+    differentWeight()
+  else
+    standardWeight()
+
+# stdio
+
+external (integer ch) integer putchar
+
+function () void newline putchar(10)
+function () void space putchar(32)
+
+function (integer i) void putZeroPadded
+  putchar(48 + (i % 10))
+
+function (integer i) void putSpacePadded
+  if i = 0
+    space()
+  else
+    putZeroPadded(i)
+
+function (integer i) void putTens
+  putSpacePadded(i / 10)
+
+function (integer i) void putOnes
+  putZeroPadded(i)
+
+function (integer i) void puti
+{
+  putTens(i)
+  putOnes(i)
+}
+
+# guessing game
+
+value islander
+{
+  integer index
+  integer weight
+  integer status
+}
+
+function (islander i) void putstatus
+{
+  space()
+  space()
+
+  if i.status = 0
+    putchar(63)   # unknown
+  else if i.status = 1
+    putchar(95)   # standard
+  else if i.status = 2
+    putchar(118)  # lower
+  else if i.status = 3
+    putchar(94)   # higher
+  else 0
+}
+
+function (integer i) islander makeUnknown  islander{i, weight(i), 0}
+function (integer i) islander makeStandard islander{i, weight(i), 1}
+function (integer i) islander makeLower    islander{i, weight(i), 2}
+function (integer i) islander makeHigher   islander{i, weight(i), 3}
+
+function (islander me, integer status) islander updateStatus
+  if status = 0
+    me
+  else
+    islander{ me.index, me.weight, status }
+
+value islanders
+{
+  islander a
+  islander b
+  islander c
+  islander d
+  islander e
+  islander f
+  islander g
+  islander h
+  islander i
+  islander j
+  islander k
+  islander l
+}
+
+function () islanders allUnknown
+  islanders{
+    makeUnknown(1),
+    makeUnknown(2),
+    makeUnknown(3),
+    makeUnknown(4),
+    makeUnknown(5),
+    makeUnknown(6),
+    makeUnknown(7),
+    makeUnknown(8),
+    makeUnknown(9),
+    makeUnknown(10),
+    makeUnknown(11),
+    makeUnknown(12)
+  }
+
+function (
+  islanders is,
+  integer a,
+  integer b,
+  integer c,
+  integer d,
+  integer e,
+  integer f,
+  integer g,
+  integer h,
+  integer i,
+  integer j,  
+  integer k,
+  integer l
+) islanders updateStatuses
+  islanders
+  {
+    updateStatus(is.a, a),
+    updateStatus(is.b, b),
+    updateStatus(is.c, c),
+    updateStatus(is.d, d),
+    updateStatus(is.e, e),
+    updateStatus(is.f, f),
+    updateStatus(is.g, g),
+    updateStatus(is.h, h),
+    updateStatus(is.i, i),
+    updateStatus(is.j, j),
+    updateStatus(is.k, k),
+    updateStatus(is.l, l)
+  }
+
+function (islanders is) void putall
+{
+  putstatus(is.a)
+  putstatus(is.b)
+  putstatus(is.c)
+  putstatus(is.d)
+  putstatus(is.e)
+  putstatus(is.f)
+  putstatus(is.g)
+  putstatus(is.h)
+  putstatus(is.i)
+  putstatus(is.j)
+  putstatus(is.k)
+  putstatus(is.l)
+}
+
+function (islanders is) void putweights
+{
+  space()
+  puti(is.a.weight)
+  space()
+  puti(is.b.weight)
+  space()
+  puti(is.c.weight)
+  space()
+  puti(is.d.weight)
+  space()
+  puti(is.e.weight)
+  space()
+  puti(is.f.weight)
+  space()
+  puti(is.g.weight)
+  space()
+  puti(is.h.weight)
+  space()
+  puti(is.i.weight)
+  space()
+  puti(is.j.weight)
+  space()
+  puti(is.k.weight)
+  space()
+  puti(is.l.weight)
+}
+
+value step
+{
+  integer step
+  islanders is
+}
+
+function () step start
+  step{ 0, allUnknown() }
+
+function (step s) step next
+  step{ s.step + 1, s.is }
+
+function (step s) void putstep
+{
+  puti(s.step)
+
+  space()
+
+  putall(s.is)
+
+  newline()
+
+
+  space()
+  space()
+
+  space()
+
+  putweights(s.is)
+
+  newline()
+}
+
+function (
+  step s,
+  integer a,
+  integer b,
+  integer c,
+  integer d,
+  integer e,
+  integer f,
+  integer g,
+  integer h,
+  integer i,
+  integer j,  
+  integer k,
+  integer l
+) step updateIslanders
+  next(step{ s.step, updateStatuses(s.is, a, b, c, d, e, f, g, h, i, j, k, l) })
+
+value group
+{
+  boolean a
+  boolean b
+  boolean c
+  boolean d
+  boolean e
+  boolean f
+  boolean g
+  boolean h
+  boolean i
+  boolean j
+  boolean k
+  boolean l
+}
+
+function (islanders is, group g) integer weighGroup
+  (if g.a is.a.weight else 0) +
+  (if g.b is.b.weight else 0) +
+  (if g.c is.c.weight else 0) +
+  (if g.d is.d.weight else 0) +
+  (if g.e is.e.weight else 0) +
+  (if g.f is.f.weight else 0) +
+  (if g.g is.g.weight else 0) +
+  (if g.h is.h.weight else 0) +
+  (if g.i is.i.weight else 0) +
+  (if g.j is.j.weight else 0) +
+  (if g.k is.k.weight else 0) +
+  (if g.l is.l.weight else 0)
+
+function (integer w, integer x, integer y, integer z) group groupFour
+  group
+{
+  if (w = 1 | x = 1 | y = 1 | z = 1) true else false,
+  if (w = 2 | x = 2 | y = 2 | z = 2) true else false,
+  if (w = 3 | x = 3 | y = 3 | z = 3) true else false,
+  if (w = 4 | x = 4 | y = 4 | z = 4) true else false,
+  if (w = 5 | x = 5 | y = 5 | z = 5) true else false,
+  if (w = 6 | x = 6 | y = 6 | z = 6) true else false,
+  if (w = 7 | x = 7 | y = 7 | z = 7) true else false,
+  if (w = 8 | x = 8 | y = 8 | z = 8) true else false,
+  if (w = 9 | x = 9 | y = 9 | z = 9) true else false,
+  if (w = 10 | x = 10 | y = 10 | z = 10) true else false,
+  if (w = 11 | x = 11 | y = 11 | z = 11) true else false,
+  if (w = 12 | x = 12 | y = 12 | z = 12) true else false
+}
+
+function (integer x, integer y, integer z) group groupThree
+  group
+{
+  if (x = 1 | y = 1 | z = 1) true else false,
+  if (x = 2 | y = 2 | z = 2) true else false,
+  if (x = 3 | y = 3 | z = 3) true else false,
+  if (x = 4 | y = 4 | z = 4) true else false,
+  if (x = 5 | y = 5 | z = 5) true else false,
+  if (x = 6 | y = 6 | z = 6) true else false,
+  if (x = 7 | y = 7 | z = 7) true else false,
+  if (x = 8 | y = 8 | z = 8) true else false,
+  if (x = 9 | y = 9 | z = 9) true else false,
+  if (x = 10 | y = 10 | z = 10) true else false,
+  if (x = 11 | y = 11 | z = 11) true else false,
+  if (x = 12 | y = 12 | z = 12) true else false
+}
+
+function (integer x, integer y) group groupTwo
+  group
+{
+  if (x = 1 | y = 1) true else false,
+  if (x = 2 | y = 2) true else false,
+  if (x = 3 | y = 3) true else false,
+  if (x = 4 | y = 4) true else false,
+  if (x = 5 | y = 5) true else false,
+  if (x = 6 | y = 6) true else false,
+  if (x = 7 | y = 7) true else false,
+  if (x = 8 | y = 8) true else false,
+  if (x = 9 | y = 9) true else false,
+  if (x = 10 | y = 10) true else false,
+  if (x = 11 | y = 11) true else false,
+  if (x = 12 | y = 12) true else false
+}
+
+function (integer x) group groupOne
+  group
+{
+  if (x = 1) true else false,
+  if (x = 2) true else false,
+  if (x = 3) true else false,
+  if (x = 4) true else false,
+  if (x = 5) true else false,
+  if (x = 6) true else false,
+  if (x = 7) true else false,
+  if (x = 8) true else false,
+  if (x = 9) true else false,
+  if (x = 10) true else false,
+  if (x = 11) true else false,
+  if (x = 12) true else false
+}
+
+#puti(weighGroup(allUnknown(), groupFour(1, 2, 3, 4)))
+#newline()
+#
+#puti(weighGroup(allUnknown(), groupThree(1, 2, 3)))
+#newline()
+#
+#puti(weighGroup(allUnknown(), groupTwo(1, 2)))
+#newline()
+
+function (integer l, integer r) integer compare
+  if l < r
+    0-1
+  else if r < l
+    1
+  else
+    0
+
+function (group g) void printGroup
+{
+  (if g.a putchar(65) else 0)
+  (if g.b putchar(66) else 0)
+  (if g.c putchar(67) else 0)
+  (if g.d putchar(68) else 0)
+  (if g.e putchar(69) else 0)
+  (if g.f putchar(70) else 0)
+  (if g.g putchar(71) else 0)
+  (if g.h putchar(72) else 0)
+  (if g.i putchar(73) else 0)
+  (if g.j putchar(74) else 0)
+  (if g.k putchar(75) else 0)
+  (if g.l putchar(76) else 0)
+}
+
+function (group lg, integer lw, group rg, integer rw) void printResult
+{
+  space()space()space()space()
+
+  printGroup(lg)
+
+  space()
+
+  if lw < rw
+    putchar(60)
+  else if rw < lw
+    putchar(62)
+  else
+    putchar(61)
+
+  space()
+
+  printGroup(rg)
+  newline()
+}
+
+function (step s, group lg, integer lw, group rg, integer rw) step elevenOrTwelveResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if (lw = rw)
+    updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+  else if lw < rw
+    updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1)
+  else
+    updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1)
+}
+
+function (step s, group lg, group rg) step elevenOrTwelveAttempt
+  elevenOrTwelveResults(
+    s,
+    lg,
+    weighGroup(s.is, lg),
+    rg,
+    weighGroup(s.is, rg)
+  )
+
+function (step s) step elevenOrTwelve
+{
+  putstep(s)
+
+  elevenOrTwelveAttempt(
+    s,
+    groupOne(9),
+    groupOne(11)
+  )
+}
+
+function (step s, boolean tenHeavier, group lg, integer lw, group rg, integer rw) step nineOrTenResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if (lw = rw)
+  {
+    if tenHeavier
+      updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 1, 1)
+    else
+      updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 1)
+  }
+  else if lw < rw
+    updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1)
+  else
+    updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1, 1)
+}
+
+function (step s, boolean tenHeavier, group lg, group rg) step nineOrTenAttempt
+  nineOrTenResults(
+    s,
+    tenHeavier,
+    lg,
+    weighGroup(s.is, lg),
+    rg,
+    weighGroup(s.is, rg)
+  )
+
+function (step s, boolean tenHeavier) step nineOrTen
+{
+  putstep(s)
+
+  nineOrTenAttempt(
+    s,
+    tenHeavier,
+    groupOne(9),
+    groupOne(11)
+  )
+}
+
+function (step s, group lg, integer lw, group rg, integer rw) step backFourResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if (lw = rw)
+  {
+    elevenOrTwelve(updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0))
+  }
+  else
+  {
+    nineOrTen(updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1), lw < rw)
+  }
+}
+
+function (step s, group l, group r) step backFourAttempt
+  backFourResults(
+    s,
+    l,
+    weighGroup(s.is, l),
+    r,
+    weighGroup(s.is, r)
+  )
+
+function (step s) step backFour
+{
+  putstep(s)
+
+  backFourAttempt(
+    s,
+    groupOne(9),
+    groupOne(10)
+  )
+}
+
+function (step s, boolean firstFourLighter, group lg, integer lw, group rg, integer rw) step fourOrEightResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if lw = rw
+    if firstFourLighter
+      updateIslanders(s, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 0)
+    else
+      updateIslanders(s, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0)
+  else
+    if firstFourLighter
+      updateIslanders(s, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0)
+    else
+      updateIslanders(s, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0)
+}
+
+function (step s, boolean firstFourLighter, group l, group r) step fourOrEightAttempt
+  fourOrEightResults(
+    s,
+    firstFourLighter,
+    l,
+    weighGroup(s.is, l),
+    r,
+    weighGroup(s.is, r)
+  )
+
+function (step s, boolean firstFourLighter) step fourOrEight
+{
+  putstep(s)
+
+  fourOrEightAttempt(
+    s,
+    firstFourLighter,
+    groupOne(4),
+    groupOne(5)
+  )
+}
+
+function (step s, boolean firstFourLighter, group lg, integer lw, group rg, integer rw) step threeOrFiveResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if lw = rw
+    updateIslanders(s, 0, 0, 1, 0, if firstFourLighter 3 else 2, 0, 0, 0, 0, 0, 0, 0)
+  else
+    updateIslanders(s, 0, 0, if firstFourLighter 2 else 3, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+}
+
+function (step s, boolean firstFourLighter, group l, group r) step threeOrFiveAttempt
+  threeOrFiveResults(
+    s,
+    firstFourLighter,
+    l,
+    weighGroup(s.is, l),
+    r,
+    weighGroup(s.is, r)
+  )
+
+function (step s, boolean firstFourLighter) step threeOrFive
+{
+  putstep(s)
+
+  threeOrFiveAttempt(
+    s,
+    firstFourLighter,
+    groupOne(3),
+    groupOne(4)
+  )
+}
+
+function (step s, boolean firstFourLighter, group lg, integer lw, group rg, integer rw) step oneTwoSixSevenResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if lw = rw
+    updateIslanders(s, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+
+  else if firstFourLighter
+    if lw < rw
+      updateIslanders(s, 2, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
+    else
+      updateIslanders(s, 1, 2, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
+
+  else
+    if lw < rw
+      updateIslanders(s, 1, 1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0)
+    else
+      updateIslanders(s, 1, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0)
+}
+
+function (step s, boolean firstFourLighter, group l, group r) step oneTwoSixSevenAttempt
+  oneTwoSixSevenResults(
+    s,
+    firstFourLighter,
+    l,
+    weighGroup(s.is, l),
+    r,
+    weighGroup(s.is, r)
+  )
+
+function (step s, boolean firstFourLighter) step oneTwoSixSeven
+{
+  putstep(s)
+
+  oneTwoSixSevenAttempt(
+    s,
+    firstFourLighter,
+    groupTwo(1, 3),
+    groupTwo(2, 7)
+  )
+}
+
+function (step s, boolean firstFourLighter, group lg, integer lw, group rg, integer rw) step frontEightResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if (lw = rw)
+    fourOrEight(updateIslanders(s, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0), firstFourLighter)
+
+  else
+    if firstFourLighter
+      if lw < rw
+        oneTwoSixSeven(updateIslanders(s, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0), firstFourLighter)
+      else
+        threeOrFive(updateIslanders(s, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0), firstFourLighter)
+
+    else
+      if lw < rw
+        threeOrFive(updateIslanders(s, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0), firstFourLighter)
+      else
+        oneTwoSixSeven(updateIslanders(s, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0), firstFourLighter)
+}
+
+function (step s, boolean firstFourLighter, group l, group r) step frontEightAttempt
+  frontEightResults(
+    s,
+    firstFourLighter,
+    l,
+    weighGroup(s.is, l),
+    r,
+    weighGroup(s.is, r)
+  )
+
+function (step s, boolean firstFourLighter) step frontEight
+{
+  putstep(s)
+
+  frontEightAttempt(
+    s,
+    firstFourLighter,
+    groupThree(1, 2, 5),
+    groupThree(6, 7, 3)
+  )
+}
+
+function (step s, group lg, integer lw, group rg, integer rw) step firstWeighingResults
+{
+  newline()
+  printResult(lg, lw, rg, rw)
+  newline()
+
+  if (lw = rw)
+  {
+    backFour(updateIslanders(s, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0))
+  }
+  else
+  {
+    frontEight(updateIslanders(s, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1), lw < rw)
+  }
+}
+
+function (step s, group left, group right) step firstWeighingAttempt
+{
+  firstWeighingResults(
+    s,
+    left,
+    weighGroup(s.is, left),
+    right,
+    weighGroup(s.is, right)
+  )
+}
+
+function (step s) step firstWeighing
+{
+  firstWeighingAttempt(
+    s,
+    groupFour(1, 2, 3, 4),
+    groupFour(5, 6, 7, 8)
+  )
+}
+
+function (step s) integer contFirst
+{
+  putstep(s)
+  0
+}
+
+function (step s) integer goFirst
+{
+  putstep(s)
+  contFirst(firstWeighing(start()))
+}
+
+goFirst(start())
