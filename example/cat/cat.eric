@@ -1,0 +1,31 @@
+# cat
+
+external () integer getchar
+external (integer ch) integer putchar
+
+function () integer maxThirtyOne
+  2147483647
+
+function () integer eofch
+  maxThirtyOne() * 2 + 1
+
+function (integer ch) boolean iseof
+  ch = eofch()
+
+function () void noop 0
+
+function (integer ch) void cathelp
+{
+  if iseof(ch)
+    noop()
+  else
+  {
+    putchar(ch)
+    cathelp(getchar())
+  }
+}
+
+function () void cat
+  cathelp(getchar())
+
+cat()
