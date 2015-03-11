@@ -397,18 +397,8 @@ static PrototypeAST *ParsePrototype() {
 }
 
 // top level expr
-FunctionAST* ParseTopLevelExpr() {
-  SourceLocation loc = getCurrentLocation();
-
-  ExprAST *E = ParseExpression();
-  if (!E) return 0;
-
-  TypeData *T = E->Typecheck();
-  if (!T) return 0;
-
-  // stick in an anonymous function
-  PrototypeAST *Proto = new PrototypeAST(loc, "", T->getName(), std::vector<std::string>(), std::vector<std::string>());
-  return new FunctionAST(Proto, E);
+ExprAST* ParseTopLevelExpr() {
+  return ParseExpression();
 }
 
 FunctionAST *ParseFunctionDefinition() {

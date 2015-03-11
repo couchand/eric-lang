@@ -134,7 +134,7 @@ static DICompositeType CreateFunctionType(FunctionType *type) {
   return DBuilder->createSubroutineType(EricDebugInfo.Unit, paramTypeArray);
 }
 
-void CreateMainFunction(std::vector<Function*> expressions) {
+void CreateMainFunction(std::vector<ExprAST*> expressions) {
   FunctionType *mainType = TypeBuilder<types::i<64>(), true>::get(getGlobalContext());
   Function *main = Function::Create(mainType, Function::ExternalLinkage, "main", TheModule);
 
@@ -165,7 +165,8 @@ void CreateMainFunction(std::vector<Function*> expressions) {
   EricDebugInfo.emitLocation(0, 0);
 
   for (unsigned i = 0, e = expressions.size(); i < e; i++) {
-    result = Builder.CreateCall(expressions[i], std::vector<Value*>());
+    EricDebugInfo.emitLocation(expressions[i]);
+    result = expressions[i]->Codegen();
   }
 
   if (!result || !result->getType()->isIntegerTy(64)) {

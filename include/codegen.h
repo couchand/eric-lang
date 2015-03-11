@@ -4,7 +4,7 @@
 #define _CODEGEN_H
 
 void InitializeCodegen(const char *filename);
-void CreateMainFunction(std::vector<Function *> expressions);
+void CreateMainFunction(std::vector<ExprAST *> expressions);
 void DumpAllCode();
 
 #endif

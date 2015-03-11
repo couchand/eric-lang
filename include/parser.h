@@ -8,7 +8,7 @@
 int getCurrentToken();
 int getNextToken();
 
-FunctionAST *ParseTopLevelExpr();
+ExprAST *ParseTopLevelExpr();
 FunctionAST *ParseFunctionDefinition();
 PrototypeAST *ParseExternalDeclaration();
 ValueTypeAST *ParseValueTypeDefinition();

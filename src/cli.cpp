@@ -18,17 +18,25 @@ static void prime() {
   getNextToken();
 }
 
-std::vector<Function*> TopLevelExpressions;
+std::vector<ExprAST*> TopLevelExpressions;
 
 static Function* handleTopLevelExpression() {
-  FunctionAST *block = ParseTopLevelExpr();
-  if (block) {
-    TypeData *T = block->Typecheck();
+  ExprAST *line = ParseTopLevelExpr();
+  if (line) {
+    TypeData *T = line->Typecheck();
     if (!T) return 0;
 
-    Function *code = block->Codegen();
-    TopLevelExpressions.push_back(code);
-    return code;
+    TopLevelExpressions.push_back(line);
+
+    if (!showPrompt) return 0;
+
+    SourceLocation loc = getCurrentLocation();
+
+    // stick in an anonymous function
+    PrototypeAST *Proto = new PrototypeAST(loc, "", T->getName(), std::vector<std::string>(), std::vector<std::string>());
+    FunctionAST *anonymous = new FunctionAST(Proto, line);
+
+    return anonymous->Codegen();
   }
   else {
     getNextToken();
