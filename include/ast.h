@@ -95,12 +95,11 @@ public:
 };
 
 class ValueReferenceAST : public ExprAST {
-  std::string Name;
-  std::vector<std::string> References;
-  std::vector<StructTypeData *> ReferenceTypes;
+  ExprAST *Source;
+  std::string FieldReference;
 public:
-  ValueReferenceAST(SourceLocation loc, const std::string &name, const std::vector<std::string> &refs)
-    : ExprAST(loc), Name(name), References(refs) {}
+  ValueReferenceAST(SourceLocation loc, ExprAST *source, const std::string &ref)
+    : ExprAST(loc), Source(source), FieldReference(ref) {}
   virtual Value *Codegen();
   virtual TypeData *Typecheck();
 };

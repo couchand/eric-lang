@@ -167,44 +167,25 @@ TypeData *ValueLiteralAST::Typecheck() {
 }
 
 TypeData *ValueReferenceAST::Typecheck() {
-  ReferenceTypes.clear();
+  TypeData *ref = Source->Typecheck();
+  if (!ref) return 0;
 
-  TypeData *ref = NamedValueTypes[Name];
-  if (!ref) {
-    std::string message = "Unknown structure name: ";
-    message += Name;
+  if (!ref->isStructType()) {
+    std::string message = "Value is not a structure type";
     return ErrorT(this, message.c_str());
   }
 
-  std::string soFar = Name;
+  StructTypeData *st = (StructTypeData *)ref;
 
-  for (unsigned i = 0, e = References.size(); i < e; i++) {
+  TypeData *field = st->getFieldType(FieldReference);
 
-    if (!ref->isStructType()) {
-      std::string message = "Variable ";
-      message += soFar;
-      message += " is not a structure type";
-      return ErrorT(this, message.c_str());
-    }
-
-    StructTypeData *st = (StructTypeData *)ref;
-
-    ReferenceTypes.push_back(st);
-
-    ref = st->getFieldType(References[i]);
-
-    if (!ref) {
-      std::string message = "Variable ";
-      message += soFar;
-      message += " has no field named ";
-      message += References[i];
-      return ErrorT(this, message.c_str());
-    }
-
-    soFar += "." + References[i];
+  if (!field) {
+    std::string message = "Value has no field named ";
+    message += FieldReference;
+    return ErrorT(this, message.c_str());
   }
 
-  return ref;
+  return field;
 }
 
 TypeData *BlockExprAST::Typecheck() {

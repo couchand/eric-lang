@@ -358,33 +358,28 @@ Value *ValueLiteralAST::Codegen() {
 }
 
 Value *ValueReferenceAST::Codegen() {
-  Value *V = NamedValues[Name];
+  TypeData *td = Source->Typecheck();
+  if (!td) return 0;
 
-  if (!V) {
-    std::string message = "Unknown variable name: '";
-    message += Name;
-    message += "'";
+  if (!td->isStructType()) {
+    std::string message = "Expecting value to be a structure, is ";
+    message += td->getName();
     return ErrorV(this, message.c_str());
   }
 
-  std::string soFar = Name;
+  StructTypeData *st = (StructTypeData *)td;
 
-  for (unsigned i = 0, e = References.size(); i < e; i++) {
-    StructTypeData *st = ReferenceTypes[i];
-    int idx = st->getFieldIndex(References[i]);
-
-    if (-1 == idx) {
-      std::string message = "Variable ";
-      message += soFar;
-      message += " has no field named ";
-      message += References[i];
-      return ErrorV(this, message.c_str());
-    }
-
-    V = Builder.CreateExtractValue(V, idx);
+  int idx = st->getFieldIndex(FieldReference);
+  if (-1 == idx) {
+    std::string message = "Value has no field named ";
+    message += FieldReference;
+    return ErrorV(this, message.c_str());
   }
 
-  return V;
+  Value *source = Source->Codegen();
+  if (!source) return 0;
+
+  return Builder.CreateExtractValue(source, idx);
 }
 
 Value *BlockExprAST::Codegen() {

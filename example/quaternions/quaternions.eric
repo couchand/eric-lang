@@ -119,3 +119,36 @@ try(
   makeQuaternion(2.0, 3.0, 4.0, 5.0),
   makeQuaternion(3.0, 4.0, 5.0, 6.0)
 )
+
+value holder
+{
+  quaternion left
+  quaternion right
+}
+
+function (holder h) number leftR
+  h.left.r
+
+function (holder h) number rightR
+  h.right.r
+
+function (holder h) number addRs
+  leftR(h) + rightR(h)
+
+function () void deeper
+{
+  assert(
+    3.0 = addRs(
+      holder{
+        makeQuaternion(1.0, 2.0, 3.0, 4.0),
+        makeQuaternion(2.0, 3.0, 4.0, 5.0)
+      }
+    )
+  )
+
+  assert(
+    3.0 = makeQuaternion(3.0, 0.0, 0.0, 0.0).r
+  )
+}
+
+deeper()

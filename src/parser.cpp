@@ -134,19 +134,18 @@ static ExprAST *parseStructLiteral(std::string IdName, SourceLocation loc) {
   return new ValueLiteralAST(loc, IdName, *Args);
 }
 
-static ExprAST *parseStructReference(std::string IdName, SourceLocation loc) {
-  std::vector<std::string> references;
+static ExprAST *parseStructReference(ExprAST *var) {
+  if (getCurrentToken() != '.')
+    return Error("Expecting . in struct reference");
 
-  while (getCurrentToken() == '.') {
-    if (getNextToken() != tok_identifier)
-      return Error("Expecting identifier in struct reference");
+  if (getNextToken() != tok_identifier)
+    return Error("Expecting identifier in struct reference");
 
-    references.push_back(getIdentifierStr());
+  std::string reference = getIdentifierStr();
 
-    getNextToken(); // eat identifier
-  }
+  getNextToken(); // eat identifier
 
-  return new ValueReferenceAST(loc, IdName, references);
+  return new ValueReferenceAST(getCurrentLocation(), var, reference);
 }
 
 // identifierexpr
@@ -163,10 +162,15 @@ static ExprAST *ParseIdentifierExpr() {
   //fprintf(stderr, "id %s, next tok %i as %c\n", IdName.c_str(), CurTok, CurTok);
 
   switch (CurTok) {
-  default:  return new VariableExprAST(loc, IdName);
   case '(': return parseFunctionCall(IdName, loc);
   case '{': return parseStructLiteral(IdName, loc);
-  case '.': return parseStructReference(IdName, loc);
+  }
+
+  ExprAST *var = new VariableExprAST(loc, IdName);
+
+  switch (CurTok) {
+  default:  return var;
+  case '.': return parseStructReference(var);
   }
 }
 
@@ -255,6 +259,8 @@ static std::map<char, int> BinopPrecedence;
 static int GetTokPrecedence() {
   if (!isascii(CurTok)) return -1;
 
+  if ('.' == CurTok) return 99;
+
   int TokPrec = BinopPrecedence[CurTok];
   if (TokPrec <= 0) return -1;
 
@@ -282,6 +288,11 @@ static ExprAST *ParseBinOpRHS(int ExprPrec, ExprAST *LHS) {
 
     int BinOp = CurTok;
     SourceLocation loc = getCurrentLocation();
+
+    if ('.' == BinOp) {
+      return parseStructReference(LHS);
+    }
+
     getNextToken(); // eat op
 
     ExprAST *RHS = ParsePrimary();
