@@ -83,10 +83,11 @@ class StructTypeData : public TypeData {
   std::string name;
   std::vector<TypeData *> fieldTypes;
   std::vector<std::string> fieldNames;
+  llvm::Type *llvmType;
 
 public:
   StructTypeData(std::string n, const std::vector<TypeData *> &fts, const std::vector<std::string> &fns)
-  : name(n), fieldTypes(fts), fieldNames(fns) {}
+  : name(n), fieldTypes(fts), fieldNames(fns), llvmType(0) {}
 
   virtual std::string getName() { return name; }
   virtual llvm::Type *getLLVMType();

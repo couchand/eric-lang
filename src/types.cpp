@@ -90,6 +90,9 @@ llvm::DIType FunctionTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *d
 // struct type methods
 
 llvm::Type *StructTypeData::getLLVMType() {
+  // already made one
+  if (llvmType) return llvmType;
+
   llvm::SmallVector<llvm::Type *, 8> fTypes;
 
   //fprintf(stdout, "getting llvm type for %s\n", name.c_str());
@@ -103,8 +106,8 @@ llvm::Type *StructTypeData::getLLVMType() {
     if (!fTypes.back()) return 0;
   }
 
-  //return llvm::StructType::create(fTypes, name);
-  return llvm::StructType::get(llvm::getGlobalContext(), fTypes);
+  llvmType = llvm::StructType::create(fTypes, name);
+  return llvmType;
 }
 
 llvm::DIType StructTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
