@@ -142,6 +142,33 @@ llvm::DIType StructTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diB
 //  DICompositeType diType = DBuilder->createStructType(DIDescriptor(), Name, EricDebugInfo.Unit, Location.Line, size, align, offset, DIType(), elements);
 }
 
+// array type
+
+std::string ArrayTypeData::getName() {
+  std::string name = "[";
+  name += MemberType->getName();
+  name += "]";
+  return name;
+}
+
+llvm::Type *ArrayTypeData::getLLVMType() {
+  llvm::SmallVector<llvm::Type *, 8> fTypes;
+
+  TypeData *integerType = TypeData::getType("integer");
+  fTypes.push_back(integerType->getLLVMType());
+
+  llvm::Type *elType = MemberType->getLLVMType();
+  fTypes.push_back(llvm::ArrayType::get(elType, 0));
+
+  llvm::Type *dataStruct = llvm::StructType::get(llvm::getGlobalContext(), fTypes);
+
+  return llvm::PointerType::get(dataStruct, 0);
+}
+
+llvm::DIType ArrayTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
+  return diBuilder->createBasicType("integer", 64, 64, llvm::dwarf::DW_ATE_signed);
+}
+
 // basic types
 
 llvm::Value *convertBooleanToInteger(llvm::IRBuilder<> irBuilder, llvm::Value *value) {
@@ -183,6 +210,12 @@ void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) 
     builder->createBasicType("boolean", 1, 1, llvm::dwarf::DW_ATE_boolean)
   );
 
+  BasicTypeData *byteType = new BasicTypeData(
+    "byte",
+    llvm::TypeBuilder<llvm::types::i<8>, true>::get(context),
+    builder->createBasicType("byte", 8, 8, llvm::dwarf::DW_ATE_unsigned)
+  );
+
   BasicTypeData *integerType = new BasicTypeData(
     "integer",
     llvm::TypeBuilder<llvm::types::i<64>, true>::get(context),
@@ -204,6 +237,7 @@ void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) 
 
   TypeData::registerType(voidType);
   TypeData::registerType(booleanType);
+  TypeData::registerType(byteType);
   TypeData::registerType(integerType);
   TypeData::registerType(numberType);
 
@@ -213,5 +247,15 @@ void InitializeBasicTypes(llvm::LLVMContext &context, llvm::DIBuilder *builder) 
   TypeData::registerType(integerType->getConverterType(numberType));
   TypeData::registerType(numberType->getConverterType(booleanType));
   TypeData::registerType(numberType->getConverterType(integerType));
+
+  ArrayTypeData *booleanArrayType = new ArrayTypeData(booleanType);
+  ArrayTypeData *byteArrayType = new ArrayTypeData(byteType);
+  ArrayTypeData *integerArrayType = new ArrayTypeData(integerType);
+  ArrayTypeData *numberArrayType = new ArrayTypeData(numberType);
+
+  TypeData::registerType(booleanArrayType);
+  TypeData::registerType(byteArrayType);
+  TypeData::registerType(integerArrayType);
+  TypeData::registerType(numberArrayType);
 
 }

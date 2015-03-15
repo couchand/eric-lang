@@ -2,7 +2,9 @@
 
 # which one is actually different?
 
-function (integer i) boolean differentIndex i = 1
+# currently broken if 1, 2 or 7 is heavier
+
+function (integer i) boolean differentIndex i = 9
 
 function () integer standardWeight 10
 function () integer differentWeight 17

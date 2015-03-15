@@ -84,6 +84,25 @@ public:
   virtual TypeData *Typecheck();
 };
 
+class ArrayLiteralExprAST : public ExprAST {
+  std::vector<ExprAST *> Elements;
+public:
+  ArrayLiteralExprAST(SourceLocation loc, std::vector<ExprAST *> &elements)
+    : ExprAST(loc), Elements(elements) {}
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
+class ArrayReferenceExprAST : public ExprAST {
+  ExprAST *Source;
+  ExprAST *Index;
+public:
+  ArrayReferenceExprAST(SourceLocation loc, ExprAST *source, ExprAST *index)
+    : ExprAST(loc), Source(source), Index(index) {};
+  virtual Value *Codegen();
+  virtual TypeData *Typecheck();
+};
+
 class ValueLiteralAST : public ExprAST {
   std::string ValueType;
   std::vector<ExprAST*> Fields;

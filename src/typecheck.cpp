@@ -54,6 +54,29 @@ TypeData *VariableExprAST::Typecheck() {
 TypeData *makeCompatible(TypeData *a, TypeData *b) {
   // TODO: conversions
   return a == b ? a : 0;
+
+  if (a->isArrayType() && b->isArrayType()) {
+    ArrayTypeData *at = (ArrayTypeData *)a;
+    ArrayTypeData *bt = (ArrayTypeData *)b;
+
+    //fprintf(stderr, "a %s empty, b %s empty\n", at->isEmptyArray() ? "is" : "isn't", bt->isEmptyArray() ? "is" : "isn't");
+
+    if (at->isEmptyArray()) {
+      ((EmptyArrayTypeData *)at)->coalesceAs(b);
+      return b;
+    }
+
+    if (bt->isEmptyArray()) {
+      ((EmptyArrayTypeData *)bt)->coalesceAs(a);
+      return a;
+    }
+  }
+//  if (a->canConvertTo(b)) {
+//    Value *Source = Args[0]->Codegen();
+//    if (!Source) return 0;
+//
+//    return source->convertTo(Builder, target, Source);
+//  }
 }
 
 TypeData *BinaryExprAST::Typecheck() {
@@ -122,13 +145,71 @@ TypeData *CallExprAST::Typecheck() {
     TypeData *paramType = FT->getParameterType(i);
     TypeData *Coalesced = makeCompatible(paramType, argType);
     if (Coalesced != paramType) {
-      std::string message = "Incompatible types in call to: ";
+      std::string message = "Incompatible types in call to ";
       message += Callee;
+      message += ": param type ";
+      message += paramType->getName();
+      message += ", arg type ";
+      message += argType->getName();
       return ErrorT(this, message.c_str());
     }
   }
 
   return FT->getReturnType();
+}
+
+TypeData *ArrayLiteralExprAST::Typecheck() {
+  if (Elements.size() == 0) {
+    return EmptyArrayTypeData::get();
+  }
+
+  TypeData *elType = Elements[0]->Typecheck();
+  if (!elType) return 0;
+
+  for (unsigned i = 1, e = Elements.size(); i < e; i++) {
+    TypeData *next = Elements[i]->Typecheck();
+    if (!next) return 0;
+
+    TypeData *coalesced = makeCompatible(elType, next);
+    if (!coalesced) {
+      std::string message = "Incompatible types in array literal: ";
+      message += elType->getName();
+      message += " and ";
+      message += next->getName();
+      return ErrorT(this, message.c_str());
+    }
+
+    elType = coalesced;
+  }
+
+  //fprintf(stderr, "array literal has element type %s\n", elType->getName().c_str());
+
+  std::string arrayTypeName = "[";
+  arrayTypeName += elType->getName();
+  arrayTypeName += "]";
+
+  TypeData *arrayType = TypeData::getType(arrayTypeName);
+
+  if (!arrayType) {
+    arrayType = new ArrayTypeData(elType);
+    TypeData::registerType(arrayType);
+  }
+
+  return arrayType;
+}
+
+TypeData *ArrayReferenceExprAST::Typecheck() {
+  TypeData *indexType = Index->Typecheck();
+  if (indexType != TypeData::getType("integer"))
+    return ErrorT(this, "array index must be an integer");
+
+  TypeData *sourceType = Source->Typecheck();
+  if (!sourceType->isArrayType())
+    return ErrorT(this, "array reference must be an array type");
+
+  ArrayTypeData *at = (ArrayTypeData *)sourceType;
+
+  return at->getMemberType();
 }
 
 TypeData *ValueLiteralAST::Typecheck() {

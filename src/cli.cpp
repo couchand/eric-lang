@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "codegen.h"
 #include "typecheck.h"
+#include "builtins.h"
 
 static bool showPrompt = true;
 
@@ -134,6 +135,7 @@ int main(int argc, char** argv) {
 
   InitializeCodegen(filename.c_str());
   InitializeTypecheck();
+  InitializeBuiltins();
 
   mainLoop();
 

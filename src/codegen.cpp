@@ -333,6 +333,109 @@ Value *CallExprAST::Codegen() {
   }
 }
 
+Value *ArrayLiteralExprAST::Codegen() {
+  TypeData *t = Typecheck();
+  if (!t) return 0;
+
+  //fprintf(stdout, "genning %s\n", t->getName().c_str());
+
+  if (!t->isArrayType())
+    return ErrorV(this, "expected array type");
+
+  ArrayTypeData *myType = (ArrayTypeData *)t;
+  if (!myType) return 0;
+
+  Type *llvmType = myType->getLLVMType();
+  if (!llvmType) return 0;
+
+  if (myType->isEmptyArray()) {
+    return ErrorV(this, "empty array never coalesced");
+  }
+
+  //fprintf(stdout, "genning %s\n", myType->getName().c_str());
+
+  TypeData *memberType = myType->getMemberType();
+  if (!memberType) {
+    return ErrorV(this, "array type has no member type");
+  }
+
+  //fprintf(stdout, "genning %s\n", memberType->getName().c_str());
+
+  Type *elementType = memberType->getLLVMType();
+  if (!elementType) return 0;
+
+  //fprintf(stdout, "genning\n");
+
+  Type *integerType = TypeData::getType("integer")->getLLVMType();
+  Type *thirtyTwoBitInteger = TypeBuilder<types::i<32>, true>::get(getGlobalContext());
+
+  //fprintf(stdout, "genning\n");
+
+  uint64_t size = DL->getTypeStoreSize(elementType);
+  uint64_t count = Elements.size();
+  uint64_t overhead = DL->getTypeStoreSize(integerType);
+
+  Value *space = ConstantInt::get(integerType, size * count + overhead);
+
+  Function *malloc = TheModule->getFunction("malloc");
+  if (!malloc) {
+    return ErrorV(this, "no malloc found");
+  }
+
+  // malloc the space for the array
+  Value *mem = Builder.CreateCall(malloc, space, "malloctmp");
+
+  // bitcast to the proper pointer type
+  Value *bc = Builder.CreateBitCast(mem, llvmType, "arraytmp");
+
+  // store the count
+  Value *countPtr = Builder.CreateConstGEP2_32(bc, 0, 0, "arraycounttmp");
+  Builder.CreateStore(ConstantInt::get(integerType, count), countPtr);
+
+  // insert the values
+  for (unsigned i = 0, e = Elements.size(); i < e; i++) {
+    Value *el = Elements[i]->Codegen();
+    if (!el) return 0;
+
+    SmallVector<Value *, 8> idxs;
+    idxs.push_back(ConstantInt::get(integerType, 0));
+    idxs.push_back(ConstantInt::get(thirtyTwoBitInteger, 1));
+    idxs.push_back(ConstantInt::get(integerType, i));
+
+    Value *elPtr = Builder.CreateGEP(bc, idxs, "arrayindextmp");
+    Builder.CreateStore(el, elPtr);
+  }
+
+  return bc;
+}
+
+Value *ArrayReferenceExprAST::Codegen() {
+  TypeData *myType = Typecheck();
+
+  Value *array = Source->Codegen();
+  if (!array) return 0;
+
+  Value *index = Index->Codegen();
+  if (!index) return 0;
+
+  Value *countPtr = Builder.CreateConstGEP2_32(array, 0, 0, "arraycountptrtmp");
+  Value *count = Builder.CreateLoad(countPtr, "arraycounttmp");
+  Value *legal = Builder.CreateICmpSLT(index, count, "legaltmp");
+
+  // TODO: only continue if legal
+
+  Type *integerType = TypeData::getType("integer")->getLLVMType();
+  Type *thirtyTwoBitInteger = TypeBuilder<types::i<32>, true>::get(getGlobalContext());
+
+  SmallVector<Value *, 8> idxs;
+  idxs.push_back(ConstantInt::get(integerType, 0));
+  idxs.push_back(ConstantInt::get(thirtyTwoBitInteger, 1));
+  idxs.push_back(index);
+
+  Value *refPtr = Builder.CreateGEP(array, idxs, "arrayindexptrtmp");
+  return Builder.CreateLoad(refPtr, "arrayindextmp");
+}
+
 Value *ValueLiteralAST::Codegen() {
   TypeData *myType = Typecheck();
   if (!myType) return 0;

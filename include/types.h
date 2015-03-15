@@ -24,6 +24,7 @@ public:
   virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder)   = 0;
 
   virtual bool isStructType() { return false; }
+  virtual bool isArrayType() { return false; }
   virtual bool canConvertTo(TypeData *other) { return false; }
   virtual llvm::Value *convertTo(llvm::IRBuilder<> builder, TypeData *other, llvm::Value *value) { return 0; }
   virtual TypeData *getConverterType(TypeData *other) { return 0; }
@@ -107,6 +108,54 @@ public:
       }
     }
     return -1;
+  }
+};
+
+class ArrayTypeData : public TypeData {
+  TypeData *MemberType;
+
+public:
+  ArrayTypeData(TypeData *memberType)
+    : MemberType(memberType) {}
+
+  virtual std::string getName();
+  virtual llvm::Type *getLLVMType();
+  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder);
+
+  virtual bool isArrayType() { return true; }
+  virtual bool isEmptyArray() { return false; }
+
+  TypeData *getMemberType() { return MemberType; }
+};
+
+class EmptyArrayTypeData : public ArrayTypeData {
+  TypeData *Coalesced = 0;
+
+public:
+  EmptyArrayTypeData()
+    : ArrayTypeData(0) {}
+
+  virtual std::string getName() { return !Coalesced ? "[*empty array*]" : Coalesced->getName(); }
+  virtual llvm::Type *getLLVMType() {
+    if (!Coalesced) {
+      fprintf(stderr, "Error: Array type never coalesced!");
+      return 0;
+    }
+    return Coalesced->getLLVMType();
+  }
+  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder){
+    if (!Coalesced) {
+      fprintf(stderr, "Error: Array type never coalesced!");
+      return llvm::DIType();
+    }
+    return Coalesced->getDIType(where, diBuilder);
+  }
+
+  virtual bool isEmptyArray() { return true; }
+  void coalesceAs(TypeData *t) { Coalesced = t; }
+
+  static EmptyArrayTypeData *get() {
+    return new EmptyArrayTypeData();
   }
 };
 

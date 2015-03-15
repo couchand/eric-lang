@@ -122,6 +122,25 @@ static ExprAST *parseFunctionCall(std::string IdName, SourceLocation loc) {
   return new CallExprAST(loc, IdName, *Args);
 }
 
+static ExprAST *parseArrayReference(ExprAST *var) {
+  SourceLocation loc = getCurrentLocation();
+
+  if (getCurrentToken() != '[')
+    return Error("Expecting [ in array reference");
+
+  getNextToken(); // eat [
+
+  ExprAST *index = ParseExpression();
+  if (!index) return 0;
+
+  if (getCurrentToken() != ']')
+    return Error("Expecting ] in array reference");
+
+  getNextToken(); // eat ]
+
+  return new ArrayReferenceExprAST(loc, var, index);
+}
+
 static ExprAST *parseStructLiteral(std::string IdName, SourceLocation loc) {
   getNextToken(); // eat {
 
@@ -174,6 +193,32 @@ static ExprAST *ParseIdentifierExpr() {
   }
 }
 
+// arrayexpr ::= '[' expression* ']'
+
+static ExprAST* ParseArrayExpr() {
+  if ('[' != CurTok)
+    return Error("expected '[' in array expression");
+
+  SourceLocation loc = getCurrentLocation();
+  std::vector<ExprAST *> elements;
+
+  getNextToken(); // eat [
+
+  while (']' != CurTok) {
+    elements.push_back(ParseExpression());
+    if (!elements.back()) return 0;
+
+    if (']' == CurTok) break;
+    if (',' != CurTok) {
+      return Error("expected ',' in array expression");
+    }
+    getNextToken(); // eat ,
+  }
+
+  getNextToken(); // eat ]
+
+  return new ArrayLiteralExprAST(loc, elements);
+}
 // blockexpr ::= expression+
 static ExprAST *ParseBlockExpr() {
   if ('{' != getCurrentToken()) {
@@ -250,6 +295,7 @@ static ExprAST *ParsePrimary() {
 
   case '(':             return ParseParenExpr();
   case '{':             return ParseBlockExpr();
+  case '[':             return ParseArrayExpr();
   }
 }
 
@@ -260,6 +306,7 @@ static int GetTokPrecedence() {
   if (!isascii(CurTok)) return -1;
 
   if ('.' == CurTok) return 99;
+  if ('[' == CurTok) return 99;
 
   int TokPrec = BinopPrecedence[CurTok];
   if (TokPrec <= 0) return -1;
@@ -292,6 +339,9 @@ static ExprAST *ParseBinOpRHS(int ExprPrec, ExprAST *LHS) {
     if ('.' == BinOp) {
       return parseStructReference(LHS);
     }
+    if ('[' == BinOp) {
+      return parseArrayReference(LHS);
+    }
 
     getNextToken(); // eat op
 
@@ -316,6 +366,44 @@ static ExprAST *ParseExpression() {
   return ParseBinOpRHS(0, LHS);
 }
 
+struct ParseTypeNameResult
+{
+  bool success;
+  std::string name;
+};
+
+static struct ParseTypeNameResult parseTypeName() {
+  std::string t;
+  switch (getCurrentToken()) {
+  default:
+    ErrorP("expected type name");
+    return {false, ""};
+
+  case tok_identifier:
+    t = getIdentifierStr();
+    getNextToken(); // eat identifier
+    return {true, t};
+
+  case '[':
+    getNextToken(); // eat [
+    t = "[";
+    struct ParseTypeNameResult nested = parseTypeName();
+    if (!nested.success) {
+      return {false, ""};
+    }
+    t += nested.name;
+    t += "]";
+
+    if (']' != getCurrentToken()) {
+      ErrorP("Expected ] to end type");
+      return {false, ""};
+    }
+    getNextToken(); // eat ]
+
+    return {true, t};
+  }
+}
+
 // valuetype ::= 'value' id '{' (id id)+ '}'
 ValueTypeAST *ParseValueTypeDefinition() {
   SourceLocation loc = getCurrentLocation();
@@ -335,12 +423,13 @@ ValueTypeAST *ParseValueTypeDefinition() {
   std::vector<std::string> elNames;
 
   while (getNextToken() != '}') {
-    if (getCurrentToken() != tok_identifier)
+    struct ParseTypeNameResult parseType = parseTypeName();
+    if (!parseType.success)
       return ErrorVT("Expected element type");
 
-    elTypes.push_back(getIdentifierStr());
+    elTypes.push_back(parseType.name);
 
-    if (getNextToken() != tok_identifier)
+    if (getCurrentToken() != tok_identifier)
       return ErrorVT("Expected element name");
 
     elNames.push_back(getIdentifierStr());
@@ -368,12 +457,13 @@ static PrototypeAST *ParsePrototype() {
 
   while (getCurrentToken() != ')') {
 
-    if (getCurrentToken() != tok_identifier)
+    struct ParseTypeNameResult typeName = parseTypeName();
+    if (!typeName.success)
       return ErrorP("Expected parameter type in prototype");
 
-    ArgTypes.push_back(getIdentifierStr());
+    ArgTypes.push_back(typeName.name);
 
-    if (getNextToken() != tok_identifier)
+    if (getCurrentToken() != tok_identifier)
       return ErrorP("Expected parameter name in prototype");
 
     ArgNames.push_back(getIdentifierStr());
@@ -389,15 +479,17 @@ static PrototypeAST *ParsePrototype() {
   std::string Returns;
   if (getNextToken() == tok_void) {
     Returns = "void";
+    getNextToken(); // eat void
   }
   else {
-    if (getCurrentToken() != tok_identifier)
-      return ErrorP("Expected void or return type in prototype");
+    struct ParseTypeNameResult typeName = parseTypeName();
+    if (!typeName.success)
+      return ErrorP("Expected parameter type in prototype");
 
-    Returns = getIdentifierStr();
+    Returns = typeName.name;
   }
 
-  if (getNextToken() != tok_identifier)
+  if (getCurrentToken() != tok_identifier)
     return ErrorP("Expected function name in prototype");
 
   std::string FnName = getIdentifierStr();

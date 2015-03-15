@@ -1,0 +1,168 @@
+# sieve of eratosthenes
+#   array motivating example
+
+# stdio
+
+external (integer ch) integer putchar
+
+function () void newline putchar(10)
+function () void space putchar(32)
+
+function (integer i) void putZeroPadded
+  putchar(48 + (i % 10))
+
+function (integer i) void putSpacePadded
+  if i = 0
+    space()
+  else
+    putZeroPadded(i)
+
+function (integer i) void putTens
+  putSpacePadded(i / 10)
+
+function (integer i) void putOnes
+  putZeroPadded(i)
+
+function (integer i) void puti
+{
+  putTens(i)
+  putOnes(i)
+}
+
+value slice
+{
+  [integer] data
+  integer start
+  integer length
+}
+
+function (slice s, integer i) integer indexRaw s.data[i]
+
+function (integer i, integer s, integer l) integer modIndexHelper
+  (s + i) % l
+
+function (slice s, integer i) integer modIndex
+  modIndexHelper(i, s.start, s.length)
+
+function (slice s, integer i) integer index
+  indexRaw(s, modIndex(s, i))
+
+function (slice s, integer newstart, integer newlength) slice sliceKernel
+  slice{
+    s.data,
+    newstart,
+    if s.length - newstart + s.start < newlength
+      s.length - newstart + s.start
+    else
+      newlength
+  }
+
+function (integer i, integer s, integer l) integer modIndexReverse
+  (i % l) + s
+
+function (slice s, integer newstart, integer newlength) slice slice
+  sliceKernel(
+    s,
+    modIndexReverse(newstart, s.start, s.length),
+    newlength
+  )
+
+function (slice s, integer i) void putslicekernel
+  if (i - s.start < s.length)
+  {
+    puti(s.data[i])
+    putslicekernel(s, i + 1)
+    0
+  }
+  else
+    0
+
+function (slice s) void putslice
+  putslicekernel(s, s.start)
+
+function (slice s) void debugslice
+{
+  putchar(91)
+  putslice(
+    slice{
+      s.data,
+      0,
+      s.start
+    }
+  )
+  putchar(92)
+  putslice(s)
+  putchar(93)
+
+  putchar(32)
+
+  puti(s.start)
+  puti(s.length)
+}
+
+function (slice s) integer head
+  s.data[s.start]
+
+# helper functions
+
+function (integer next, [integer] a) [integer] removeDivisible
+  a
+
+function (integer next, [integer] a) [integer] step
+{
+  puti(next)
+  newline()
+
+  removeDivisible(next, a)
+}
+
+#function ([integer] remaining) [integer] loop
+#  if remaining.size = 0
+#    remaining
+#  else
+#    step(remaining[0], remaining)
+
+#step(2, [1, 2, 3])
+
+function (slice s) void playWithSlice
+{
+  debugslice(s)
+  newline()
+
+  debugslice(slice(s, 3, 3))
+  newline()
+
+  debugslice(
+    slice(
+      slice(s, 3, 3),
+      1, 2
+    )
+  )
+  newline()
+
+  debugslice(
+    slice(
+      slice(
+        slice(s, 3, 3),
+        1, 2
+      ),
+      2, 1
+    )
+  )
+  newline()
+
+  debugslice(
+    slice(
+      slice(
+        slice(
+          slice(s, 1, 6),
+        3, 3),
+        1, 2
+      ),
+      2, 1
+    )
+  )
+  newline()
+}
+
+playWithSlice(slice{[0, 1, 2, 3, 4, 5, 6], 0, 7})
