@@ -7,11 +7,11 @@
 static Function *initializeMalloc() {
   SourceLocation loc = { 0, 0 };
 
-  std::string returnType = "[byte]";
+  TypeSpecifier *returnType = new ArrayTypeSpecifier(new BasicTypeSpecifier("byte"));
 
-  std::vector<std::string> argTypes;
+  std::vector<TypeSpecifier *> argTypes;
   std::vector<std::string> argNames;
-  argTypes.push_back("integer");
+  argTypes.push_back(new BasicTypeSpecifier("integer"));
   argNames.push_back("size");
 
   PrototypeAST *proto = new PrototypeAST(loc, "malloc", returnType, argTypes, argNames);
@@ -25,16 +25,12 @@ static Function *initializeLength(std::string elType) {
   std::string functionName = "length.";
   functionName += elType;
 
-  std::string returnType = "integer";
+  TypeSpecifier *returnType = new BasicTypeSpecifier("integer");
 
-  std::vector<std::string> argTypes;
+  std::vector<TypeSpecifier *> argTypes;
   std::vector<std::string> argNames;
 
-  std::string typeName = "[";
-  typeName += elType;
-  typeName += "]";
-
-  argTypes.push_back(typeName);
+  argTypes.push_back(new ArrayTypeSpecifier(new BasicTypeSpecifier(elType)));
   argNames.push_back("array");
 
   PrototypeAST *proto = new PrototypeAST(loc, functionName, returnType, argTypes, argNames);

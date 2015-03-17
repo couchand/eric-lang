@@ -304,14 +304,11 @@ TypeData *ConditionalExprAST::Typecheck() {
 }
 
 FunctionTypeData *PrototypeAST::Typecheck() {
-  TypeData *ReturnType;
-  if (Returns != "") {
-    ReturnType = TypeData::getType(Returns);
-    if (!ReturnType) {
-      std::string message = "Unknown return type in function prototype: ";
-      message += Returns;
-      return ErrorFT(Location, message.c_str());
-    }
+  TypeData *ReturnType = TypeData::getType(Returns);
+  if (!ReturnType) {
+    std::string message = "Unknown return type in function prototype: ";
+    message += Returns->getName();
+    return ErrorFT(Location, message.c_str());
   }
 
   std::vector<TypeData *> Params;
@@ -319,7 +316,7 @@ FunctionTypeData *PrototypeAST::Typecheck() {
     TypeData *ArgType = TypeData::getType(ArgTypes[i]);
     if (!ArgType) {
       std::string message = "Unknown param type in function prototype: ";
-      message += ArgTypes[i];
+      message += ArgTypes[i]->getName();
       return ErrorFT(Location, message.c_str());
     }
 

@@ -42,6 +42,11 @@ FunctionAST *ErrorF(const char* message) {
   return 0;
 }
 
+TypeSpecifier *ErrorTS(const char* message) {
+  Error(message);
+  return 0;
+}
+
 // recursive descent parsing
 
 static ExprAST* ParseExpression();
@@ -366,41 +371,30 @@ static ExprAST *ParseExpression() {
   return ParseBinOpRHS(0, LHS);
 }
 
-struct ParseTypeNameResult
-{
-  bool success;
-  std::string name;
-};
+// infrastructure
 
-static struct ParseTypeNameResult parseTypeName() {
+static TypeSpecifier *parseTypeName() {
   std::string t;
   switch (getCurrentToken()) {
   default:
-    ErrorP("expected type name");
-    return {false, ""};
+    return ErrorTS("expected type name");
 
   case tok_identifier:
     t = getIdentifierStr();
     getNextToken(); // eat identifier
-    return {true, t};
+    return new BasicTypeSpecifier(t);
 
   case '[':
     getNextToken(); // eat [
-    t = "[";
-    struct ParseTypeNameResult nested = parseTypeName();
-    if (!nested.success) {
-      return {false, ""};
-    }
-    t += nested.name;
-    t += "]";
+    TypeSpecifier *nested = parseTypeName();
+    if (!nested) return 0;
 
     if (']' != getCurrentToken()) {
-      ErrorP("Expected ] to end type");
-      return {false, ""};
+      return ErrorTS("Expected ] to end type");
     }
     getNextToken(); // eat ]
 
-    return {true, t};
+    return new ArrayTypeSpecifier(nested);
   }
 }
 
@@ -419,15 +413,15 @@ ValueTypeAST *ParseValueTypeDefinition() {
   if (getNextToken() != '{')
     return ErrorVT("Expected { to start value type ");
 
-  std::vector<std::string> elTypes;
+  std::vector<TypeSpecifier *> elTypes;
   std::vector<std::string> elNames;
 
   while (getNextToken() != '}') {
-    struct ParseTypeNameResult parseType = parseTypeName();
-    if (!parseType.success)
+    TypeSpecifier *parseType = parseTypeName();
+    if (!parseType)
       return ErrorVT("Expected element type");
 
-    elTypes.push_back(parseType.name);
+    elTypes.push_back(parseType);
 
     if (getCurrentToken() != tok_identifier)
       return ErrorVT("Expected element name");
@@ -452,16 +446,16 @@ static PrototypeAST *ParsePrototype() {
 
   getNextToken(); // eat (
 
-  std::vector<std::string> ArgTypes;
+  std::vector<TypeSpecifier *> ArgTypes;
   std::vector<std::string> ArgNames;
 
   while (getCurrentToken() != ')') {
 
-    struct ParseTypeNameResult typeName = parseTypeName();
-    if (!typeName.success)
+    TypeSpecifier *typeName = parseTypeName();
+    if (!typeName)
       return ErrorP("Expected parameter type in prototype");
 
-    ArgTypes.push_back(typeName.name);
+    ArgTypes.push_back(typeName);
 
     if (getCurrentToken() != tok_identifier)
       return ErrorP("Expected parameter name in prototype");
@@ -476,17 +470,15 @@ static PrototypeAST *ParsePrototype() {
     getNextToken(); // eat ,
   }
 
-  std::string Returns;
+  TypeSpecifier *Returns;
   if (getNextToken() == tok_void) {
-    Returns = "void";
+    Returns = new BasicTypeSpecifier("void");
     getNextToken(); // eat void
   }
   else {
-    struct ParseTypeNameResult typeName = parseTypeName();
-    if (!typeName.success)
-      return ErrorP("Expected parameter type in prototype");
-
-    Returns = typeName.name;
+    Returns = parseTypeName();
+    if (!Returns)
+      return ErrorP("Expected return type in prototype");
   }
 
   if (getCurrentToken() != tok_identifier)

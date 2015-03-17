@@ -6,7 +6,7 @@ LDFLAGS=-O3 `$(LLVM_CONFIG) --ldflags --libs core --system-libs`
 
 all: cli
 
-obj/builtins.o: src/builtins.cpp include/builtins.h
+obj/builtins.o: src/builtins.cpp include/builtins.h include/ast.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 obj/cli.o: src/cli.cpp include/ast.h include/parser.h include/codegen.h include/typecheck.h include/types.h include/builtins.h

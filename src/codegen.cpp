@@ -553,25 +553,18 @@ Value *ConditionalExprAST::Codegen() {
 }
 
 TypeData *ValueTypeAST::MakeType() {
-  //fprintf(stderr, "creating type %s\n", Name.c_str());
-
-
   std::vector<TypeData *> ts;
   for (unsigned i = 0, e = ElementNames.size(); i < e; i++) {
-    //fprintf(stdout, "   element %i %s type %s\n", i, ElementNames[i].c_str(), ElementTypes[i].c_str());
-
     TypeData *t = TypeData::getType(ElementTypes[i]);
-    if (!t) {
-      fprintf(stderr, "Unknown field type %s for %s\n", ElementTypes[i].c_str(), ElementNames[i].c_str());
-      return 0;
-    }
+    if (!t) return 0;
 
     ts.push_back(t);
   }
 
   TypeData *typeData = new StructTypeData(Name, ts, ElementNames);
-  //fprintf(stderr, "registering type %s\n", Name.c_str());
+
   TypeData::registerType(typeData);
+
   return typeData;
 }
 

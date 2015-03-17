@@ -33,8 +33,10 @@ static Function* handleTopLevelExpression() {
 
     SourceLocation loc = getCurrentLocation();
 
+    TypeSpecifier *ts = new BasicTypeSpecifier(T->getName());
+
     // stick in an anonymous function
-    PrototypeAST *Proto = new PrototypeAST(loc, "", T->getName(), std::vector<std::string>(), std::vector<std::string>());
+    PrototypeAST *Proto = new PrototypeAST(loc, "", ts, std::vector<TypeSpecifier *>(), std::vector<std::string>());
     FunctionAST *anonymous = new FunctionAST(Proto, line);
 
     return anonymous->Codegen();

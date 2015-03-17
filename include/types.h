@@ -15,6 +15,45 @@
 
 typedef llvm::Value *(*ConversionFunction)(llvm::IRBuilder<>, llvm::Value *);
 
+// type specifiers
+
+class TypeSpecifier {
+public:
+  virtual std::string getName() = 0;
+};
+
+class BasicTypeSpecifier : public TypeSpecifier {
+  std::string name;
+
+public:
+  BasicTypeSpecifier(const std::string &name) : name(name) {}
+
+  std::string getName() { return name; }
+};
+
+class FunctionTypeSpecifier : public TypeSpecifier {
+  TypeSpecifier *returnType;
+  std::vector<TypeSpecifier *> parameterTypes;
+
+public:
+  FunctionTypeSpecifier(TypeSpecifier *returns, std::vector<TypeSpecifier *> takes)
+    : returnType(returns), parameterTypes(takes) {}
+
+  std::string getName();
+};
+
+class ArrayTypeSpecifier : public TypeSpecifier {
+  TypeSpecifier *elementType;
+
+public:
+  ArrayTypeSpecifier(TypeSpecifier *elType)
+    : elementType(elType) {}
+
+  std::string getName();
+};
+
+// types
+
 class TypeData {
   static std::map<std::string, TypeData *> types;
 
@@ -30,6 +69,7 @@ public:
   virtual TypeData *getConverterType(TypeData *other) { return 0; }
 
   static TypeData *getType(std::string name);
+  static TypeData *getType(TypeSpecifier *specifier);
   static void registerType(TypeData *type);
 
 };

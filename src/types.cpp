@@ -2,12 +2,65 @@
 
 #include "types.h"
 
+static std::string dataName(void *d) {
+  return ((TypeData *)d)->getName();
+}
+
+static std::string specName(void *s) {
+  return ((TypeSpecifier *)s)->getName();
+}
+
+typedef std::string (*nameFn)(void *);
+
+static std::string functionTypeName(std::vector<void *> parameterTypes, void *returnType, nameFn getName) {
+  std::string name = "(";
+  if (parameterTypes.size() > 0) {
+    name += getName(parameterTypes[0]);
+
+    for (unsigned i = 1, e = parameterTypes.size(); i < e; i++) {
+      name += "," + getName(parameterTypes[i]);
+    }
+  }
+  name += ")" + getName(returnType);
+
+  return name;
+}
+
+static std::string arrayTypeName(void *elementType, nameFn getName) {
+  std::string name = "[";
+  name += getName(elementType);
+  name += "]";
+  return name;
+}
+
+// type specifiers
+
+std::string FunctionTypeSpecifier::getName() {
+  std::vector<void *> pts;
+  for (unsigned i = 0, e = parameterTypes.size(); i < e; i++) {
+    pts.push_back(parameterTypes[i]);
+  }
+  return functionTypeName(pts, returnType, specName);
+}
+
+std::string ArrayTypeSpecifier::getName() {
+  return arrayTypeName(elementType, specName);
+}
+
+// types
+
 // static methods
 
 std::map<std::string, TypeData *> TypeData::types;
 std::map<std::string, FunctionTypeData *> FunctionTypeData::functionTypes;
 
 TypeData *TypeData::getType(std::string name) {
+  TypeSpecifier *t = new BasicTypeSpecifier(name);
+  return getType(t);
+}
+
+TypeData *TypeData::getType(TypeSpecifier *specifier) {
+  std::string name = specifier->getName();
   return TypeData::types[name];
 }
 

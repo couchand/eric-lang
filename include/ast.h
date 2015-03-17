@@ -147,13 +147,13 @@ class ValueTypeAST {
   SourceLocation Location;
 
   std::string Name;
-  std::vector<std::string> ElementTypes;
+  std::vector<TypeSpecifier *> ElementTypes;
   std::vector<std::string> ElementNames;
 public:
   ValueTypeAST(
     SourceLocation loc,
     const std::string &name,
-    const std::vector<std::string> &eltypes,
+    const std::vector<TypeSpecifier *> &eltypes,
     const std::vector<std::string> &elnames
   ) : Location(loc), Name(name), ElementTypes(eltypes), ElementNames(elnames) {}
 
@@ -164,15 +164,15 @@ class PrototypeAST {
   SourceLocation Location;
 
   std::string Name;
-  std::string Returns;
-  std::vector<std::string> ArgTypes;
+  TypeSpecifier *Returns;
+  std::vector<TypeSpecifier *> ArgTypes;
   std::vector<std::string> ArgNames;
 public:
   PrototypeAST(
     SourceLocation loc,
     const std::string &name,
-    const std::string &returns,
-    const std::vector<std::string> &argtypes,
+    TypeSpecifier *returns,
+    const std::vector<TypeSpecifier *> &argtypes,
     const std::vector<std::string> &argnames
   )
     : Location(loc), Name(name), Returns(returns), ArgTypes(argtypes), ArgNames(argnames) {}
