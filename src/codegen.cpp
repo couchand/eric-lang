@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "context.h"
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -45,6 +46,7 @@ struct DebugInfo {
 
   DICompileUnit Module;
   DIFile Unit;
+  DebugContext *DebugContext;
   std::map<std::string, DIType> Types;
 
   std::vector<DIScope *> LexicalBlocks;
@@ -104,19 +106,21 @@ void InitializeCodegen(const char *filename) {
 
   EricDebugInfo.Unit = DBuilder->createFile(EricDebugInfo.Module.getFilename(), EricDebugInfo.Module.getDirectory());
 
+  EricDebugInfo.DebugContext = new DebugContext(&EricDebugInfo.Unit, DBuilder, new DataLayout(TheModule));
+
   InitializeDataLayout(TheModule);
   InitializeBasicTypes(Context, DBuilder);
 }
 
 static DIType getDebugType(Type *type) {
   if (type->isIntegerTy(1)) {
-    return TypeData::getType("boolean")->getDIType(&EricDebugInfo.Unit, DBuilder);
+    return TypeData::getType("boolean")->getDIType(EricDebugInfo.DebugContext);
   }
   else if (type->isIntegerTy()) {
-    return TypeData::getType("integer")->getDIType(&EricDebugInfo.Unit, DBuilder);
+    return TypeData::getType("integer")->getDIType(EricDebugInfo.DebugContext);
   }
   else { //if (type->isFloatingPointTy()) {
-    return TypeData::getType("number")->getDIType(&EricDebugInfo.Unit, DBuilder);
+    return TypeData::getType("number")->getDIType(EricDebugInfo.DebugContext);
   }
 }
 
@@ -569,7 +573,10 @@ TypeData *ValueTypeAST::MakeType() {
 }
 
 Function *PrototypeAST::Codegen() {
-  FunctionType *FT = (FunctionType *)Typecheck()->getLLVMType();
+  TypeData *t = Typecheck();
+  if (!t) return 0;
+
+  FunctionType *FT = (FunctionType *)t->getLLVMType();
   Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
 
   if (F->getName() != Name) {
@@ -589,6 +596,8 @@ Function *PrototypeAST::Codegen() {
     }
   }
 
+  DICompositeType debugType = (DICompositeType)t->getDIType(EricDebugInfo.DebugContext);
+
   DIDescriptor fContext(EricDebugInfo.Unit);
   DISubprogram SP = DBuilder->createFunction(
     fContext,                                   // file
@@ -596,7 +605,7 @@ Function *PrototypeAST::Codegen() {
     "",                                         // ??
     EricDebugInfo.Unit,                         // file
     Location.Line,                              // line number
-    CreateFunctionType(FT),                     // function type
+    debugType,                                  // function type
     false,                                      // internal linkage
     true,                                       // definition
     0,                                          // ??
@@ -617,6 +626,9 @@ void PrototypeAST::UpdateArguments(Function *F) {
 
     NamedValues[ArgNames[Idx]] = AI;
 
+    TypeData *argType = TypeData::getType(ArgTypes[Idx]);
+    if (!argType) fprintf(stderr, "Error retrieving argument type.\n");
+
     DIScope *Scope = EricDebugInfo.LexicalBlocks.back();
     DIVariable D = DBuilder->createLocalVariable(
       dwarf::DW_TAG_arg_variable,
@@ -624,7 +636,7 @@ void PrototypeAST::UpdateArguments(Function *F) {
       ArgNames[Idx],
       EricDebugInfo.Unit,
       Location.Line,
-      TypeData::getType(ArgTypes[Idx])->getDIType(&EricDebugInfo.Unit, DBuilder),
+      argType->getDIType(EricDebugInfo.DebugContext),
       Idx
     );
 

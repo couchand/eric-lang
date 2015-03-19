@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "context.h"
+
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypeBuilder.h"
@@ -60,7 +62,7 @@ class TypeData {
 public:
   virtual std::string  getName()     = 0;
   virtual llvm::Type  *getLLVMType() = 0;
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder)   = 0;
+  virtual llvm::DIType getDIType(DebugContext *context) = 0;
 
   virtual bool isStructType() { return false; }
   virtual bool isArrayType() { return false; }
@@ -86,7 +88,7 @@ public:
 
   virtual std::string getName();
   virtual llvm::Type *getLLVMType();
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder);
+  virtual llvm::DIType getDIType(DebugContext *context);
 
   unsigned getNumParameters() { return parameterTypes.size(); }
   TypeData *getParameterType(unsigned i) { return parameterTypes[i]; }
@@ -109,7 +111,7 @@ public:
 
   virtual std::string getName() { return name; }
   virtual llvm::Type  *getLLVMType() { return llvmType; }
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) { return diType; }
+  virtual llvm::DIType getDIType(DebugContext *context) { return diType; }
 
   void addConversion(TypeData *other, ConversionFunction converter) {
     conversions[other] = converter;
@@ -125,14 +127,16 @@ class StructTypeData : public TypeData {
   std::vector<TypeData *> fieldTypes;
   std::vector<std::string> fieldNames;
   llvm::Type *llvmType;
+  llvm::DIType diType;
+  bool hasDIType;
 
 public:
   StructTypeData(std::string n, const std::vector<TypeData *> &fts, const std::vector<std::string> &fns)
-  : name(n), fieldTypes(fts), fieldNames(fns), llvmType(0) {}
+  : name(n), fieldTypes(fts), fieldNames(fns), llvmType(0), hasDIType(false) {}
 
   virtual std::string getName() { return name; }
   virtual llvm::Type *getLLVMType();
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder);
+  virtual llvm::DIType getDIType(DebugContext *context);
   virtual bool isStructType() { return true; }
 
   unsigned getNumFields() { return fieldTypes.size(); }
@@ -160,7 +164,7 @@ public:
 
   virtual std::string getName();
   virtual llvm::Type *getLLVMType();
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder);
+  virtual llvm::DIType getDIType(DebugContext *context);
 
   virtual bool isArrayType() { return true; }
   virtual bool isEmptyArray() { return false; }
@@ -183,12 +187,12 @@ public:
     }
     return Coalesced->getLLVMType();
   }
-  virtual llvm::DIType getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder){
+  virtual llvm::DIType getDIType(DebugContext *context){
     if (!Coalesced) {
       fprintf(stderr, "Error: Array type never coalesced!");
       return llvm::DIType();
     }
-    return Coalesced->getDIType(where, diBuilder);
+    return Coalesced->getDIType(context);
   }
 
   virtual bool isEmptyArray() { return true; }

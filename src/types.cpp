@@ -128,16 +128,16 @@ llvm::Type *FunctionTypeData::getLLVMType() {
   return llvm::FunctionType::get(returns, takes, false);
 }
 
-llvm::DIType FunctionTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
+llvm::DIType FunctionTypeData::getDIType(DebugContext *context) {
   llvm::SmallVector<llvm::Value *, 8> paramTypes;
 
-  paramTypes.push_back(returnType->getDIType(where, diBuilder));
+  paramTypes.push_back(returnType->getDIType(context));
   for (unsigned i = 0, e = parameterTypes.size(); i < e; i++) {
-    paramTypes.push_back(parameterTypes[i]->getDIType(where, diBuilder));
+    paramTypes.push_back(parameterTypes[i]->getDIType(context));
   }
 
-  llvm::DIArray paramTypeArray = diBuilder->getOrCreateArray(paramTypes);
-  return diBuilder->createSubroutineType(*where, paramTypeArray);
+  llvm::DIArray paramTypeArray = context->getBuilder()->getOrCreateArray(paramTypes);
+  return context->getBuilder()->createSubroutineType(context->getFile(), paramTypeArray);
 }
 
 // struct type methods
@@ -163,36 +163,41 @@ llvm::Type *StructTypeData::getLLVMType() {
   return llvmType;
 }
 
-llvm::DIType StructTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
-  return diBuilder->createBasicType("integer", 64, 64, llvm::dwarf::DW_ATE_signed);
-//  SmallVector<Type *, 8> elTypes;
-//  SmallVector<Value *, 8> fields;
-//  for (unsigned i = 0, e = ElementTypes.size(); i < e; i++) {
-//    std::string element = ElementNames[i];
-//    TypeData *elType = TypeData::getType(ElementTypes[element]);
-//    if (!elType) return 0;
-//
-//    elTypes.push_back(elType->getLLVMType());
-//    if (!elTypes.back()) return 0;
-//
-//    uint64_t elsize = DL->getTypeSizeInBits(elTypes.back());
-//    uint64_t elalign = DL->getABITypeAlignment(elTypes.back());
-//    uint64_t eloffset = 0;
-//    DIType t = elType->getDIType(&EricDebugInfo.Unit, DBuilder);
-//
-//    fields.push_back(DBuilder->createMemberType(DIDescriptor(), element, EricDebugInfo.Unit, Location.Line, elsize, elalign, eloffset, 0, t));
-//    if (!fields.back()) return 0;
-//  }
-//
-//  StructType *llvmType = StructType::create(getGlobalContext(), elTypes, Name);
-//
-//  uint64_t size = DL->getTypeSizeInBits(llvmType);
-//  uint64_t align = DL->getABITypeAlignment(llvmType);
-//  uint64_t offset = 0;
-//
-//  DIArray elements = DBuilder->getOrCreateArray(fields);
-//
-//  DICompositeType diType = DBuilder->createStructType(DIDescriptor(), Name, EricDebugInfo.Unit, Location.Line, size, align, offset, DIType(), elements);
+llvm::DIType StructTypeData::getDIType(DebugContext *context) {
+  if (hasDIType) {
+    return diType;
+  }
+
+  llvm::SmallVector<llvm::Value *, 8> fields;
+  for (unsigned i = 0, e = fieldTypes.size(); i < e; i++) {
+    std::string fieldName = fieldNames[i];
+    TypeData *fieldType = fieldTypes[i];
+    if (!fieldType) return llvm::DIType();
+
+    llvm::Type *fieldLLVMType = fieldType->getLLVMType();
+    if (!fieldLLVMType) return llvm::DIType();
+
+    uint64_t elsize = context->getDataLayout()->getTypeSizeInBits(fieldLLVMType);
+    uint64_t elalign = context->getDataLayout()->getABITypeAlignment(fieldLLVMType);
+    uint64_t eloffset = i * elsize;
+    llvm::DIType t = fieldType->getDIType(context);
+
+    fields.push_back(context->getBuilder()->createMemberType(llvm::DIDescriptor(), fieldName, context->getFile(), 0, elsize, elalign, eloffset, llvm::dwarf::DW_ACCESS_public, t));
+    if (!fields.back()) return llvm::DIType();
+  }
+
+  llvm::Type *llvmType = getLLVMType();
+
+  uint64_t size = context->getDataLayout()->getTypeSizeInBits(llvmType);
+  uint64_t align = context->getDataLayout()->getABITypeAlignment(llvmType);
+  uint64_t offset = 0;
+
+  llvm::DIArray elements = context->getBuilder()->getOrCreateArray(fields);
+
+  diType = context->getBuilder()->createStructType(llvm::DIDescriptor(), name, context->getFile(), 0, size, align, offset, llvm::DIType(), elements);
+  hasDIType = true;
+
+  return diType;
 }
 
 // array type
@@ -218,8 +223,8 @@ llvm::Type *ArrayTypeData::getLLVMType() {
   return llvm::PointerType::get(dataStruct, 0);
 }
 
-llvm::DIType ArrayTypeData::getDIType(llvm::DIFile *where, llvm::DIBuilder *diBuilder) {
-  return diBuilder->createBasicType("integer", 64, 64, llvm::dwarf::DW_ATE_signed);
+llvm::DIType ArrayTypeData::getDIType(DebugContext *context) {
+  return context->getBuilder()->createBasicType("integer", 64, 64, llvm::dwarf::DW_ATE_signed);
 }
 
 // basic types
