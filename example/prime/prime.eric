@@ -13,6 +13,10 @@ function (integer i) integer putTens
 
 function (integer i) integer puti
 {
+  putTens(i / 10000)
+  putTens(i / 1000)
+  putTens(i / 100)
+  putTens(i / 10)
   putTens(i)
   putOnes(i)
 }
@@ -38,14 +42,12 @@ function (integer n) boolean isPrime
 
 function (integer n) void testPrime
 {
-  puti(n)
   if isPrime(n)
   {
-    putchar(32)
-    putchar(33)
+    puti(n)
+    putchar(10)
   }
   else 0
-  putchar(10)
 }
 
 function (integer max, integer current) integer testPrimes
@@ -56,4 +58,4 @@ function (integer max, integer current) integer testPrimes
   }
   else 0
 
-testPrimes(100, 2)
+testPrimes(100000, 2)
